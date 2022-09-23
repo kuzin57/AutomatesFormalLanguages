@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"workspace/adapters"
+	automatesadapters "workspace/adapters/automates_adapters"
 	"workspace/internal/actions"
 	"workspace/internal/config"
 )
@@ -29,7 +30,7 @@ func NewMakeNFAAction(params *MakeNFAParams) (*MakeNFAAction, error) {
 
 func (a *MakeNFAAction) Do() {
 	parts := strings.Split(a.params.Expr, "+")
-	automateAdapter := adapters.NewAdapter(config.MakeAdaptersConfig(false))
+	automateAdapter := automatesadapters.NewAutomateAdapter(config.MakeAdaptersConfig(false))
 
 	for _, part := range parts {
 		fmt.Println("last: ", part[len(part)-2:len(part)-1])

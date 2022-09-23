@@ -1,0 +1,26 @@
+package automatesadapters
+
+import (
+	"workspace/adapters"
+	"workspace/internal/automate"
+	customerrors "workspace/internal/errors"
+)
+
+type faAutomateAdapter struct {
+}
+
+func (a *faAutomateAdapter) Get() (automate.Automate, error) {
+	return nil, customerrors.ErrNotImplemented
+}
+
+func (a *faAutomateAdapter) Create(string, []string) error {
+	return customerrors.ErrNotImplemented
+}
+
+func (a *faAutomateAdapter) AddStar() error {
+	return customerrors.ErrNotImplemented
+}
+
+func (a *faAutomateAdapter) Join(adapters.AutomateAdapter) error {
+	return customerrors.ErrNotImplemented
+}

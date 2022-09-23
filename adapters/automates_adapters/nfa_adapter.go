@@ -1,29 +1,15 @@
-package adapters
+package automatesadapters
 
 import (
 	"fmt"
 	"strings"
+	"workspace/adapters"
 	"workspace/internal/automate"
-	"workspace/internal/config"
 	customerrors "workspace/internal/errors"
 )
 
-type AutomateAdapter interface {
-	Get() (automate.Automate, error)
-	Create(string, []string) error
-	AddStar() error
-	Join(AutomateAdapter) error
-}
-
 type nfaAutomateAdapter struct {
 	automate automate.Automate
-}
-
-func NewAdapter(cfg config.AdaptersConfig) AutomateAdapter {
-	if cfg.IsDeterministic {
-		return &faAutomateAdapter{}
-	}
-	return &nfaAutomateAdapter{}
 }
 
 func (a *nfaAutomateAdapter) Get() (automate.Automate, error) {
@@ -69,7 +55,7 @@ func (a *nfaAutomateAdapter) AddStar() error {
 	return nil
 }
 
-func (a *nfaAutomateAdapter) Join(other AutomateAdapter) error {
+func (a *nfaAutomateAdapter) Join(other adapters.AutomateAdapter) error {
 	realNFAAdapter := other.(*nfaAutomateAdapter)
 	if a.automate == nil || realNFAAdapter.automate == nil {
 		return customerrors.ErrNoAutomate
@@ -77,23 +63,4 @@ func (a *nfaAutomateAdapter) Join(other AutomateAdapter) error {
 
 	a.automate.Join(realNFAAdapter.automate)
 	return nil
-}
-
-type faAutomateAdapter struct {
-}
-
-func (a *faAutomateAdapter) Get() (automate.Automate, error) {
-	return nil, customerrors.ErrNotImplemented
-}
-
-func (a *faAutomateAdapter) Create(string, []string) error {
-	return customerrors.ErrNotImplemented
-}
-
-func (a *faAutomateAdapter) AddStar() error {
-	return customerrors.ErrNotImplemented
-}
-
-func (a *faAutomateAdapter) Join(AutomateAdapter) error {
-	return customerrors.ErrNotImplemented
 }

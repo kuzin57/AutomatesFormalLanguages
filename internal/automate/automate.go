@@ -5,16 +5,6 @@ import (
 	customerrors "workspace/internal/errors"
 )
 
-type Automate interface {
-	DeleteEps() error
-	Read(string) (string, error)
-	Check() bool
-	AddNewWord(string) error
-	Cycle() error
-	Concat(Automate) error
-	Join(Automate) error
-}
-
 func NewNFA() *nfa {
 	return &nfa{startState: &state{isTerm: false, next: make(map[string]*state)}}
 }
