@@ -5,6 +5,7 @@ import (
 	"strings"
 	"workspace/adapters"
 	"workspace/internal/actions"
+	"workspace/internal/config"
 )
 
 type MakeNFAParams struct {
@@ -19,6 +20,7 @@ type MakeNFAAction struct {
 }
 
 type MakeNFAResult struct {
+	Adapter adapters.AutomateAdapter
 }
 
 func NewMakeNFAAction(params *MakeNFAParams) (*MakeNFAAction, error) {
@@ -27,7 +29,7 @@ func NewMakeNFAAction(params *MakeNFAParams) (*MakeNFAAction, error) {
 
 func (a *MakeNFAAction) Do() {
 	parts := strings.Split(a.params.Expr, "+")
-	automateAdapter := adapters.NewNFAAdapter()
+	automateAdapter := adapters.NewAdapter(config.MakeAdaptersConfig(false))
 
 	for _, part := range parts {
 		fmt.Println("last: ", part[len(part)-2:len(part)-1])
@@ -36,4 +38,6 @@ func (a *MakeNFAAction) Do() {
 		smallerParts := strings.Split(part, ",")
 		automateAdapter.Create(a.params.Name, smallerParts)
 	}
+
+	a.result = &MakeNFAResult{Adapter: automateAdapter}
 }
