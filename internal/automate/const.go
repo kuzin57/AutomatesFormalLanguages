@@ -1,0 +1,5 @@
+package automate
+
+const (
+	emptyWord = "#"
+)
