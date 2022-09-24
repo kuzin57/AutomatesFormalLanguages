@@ -13,9 +13,9 @@ import (
 )
 
 type Shell struct {
-	router   *commandRouter
+	router    *commandRouter
 	Automates []adapters.AutomateAdapter
-	prompt   string
+	prompt    string
 }
 
 func (s *Shell) Run() (err error) {
@@ -52,8 +52,10 @@ func (s *Shell) Init() error {
 
 	s.router.commands = &cobra.Command{}
 	s.router.commands.AddCommand(createCmd)
+	s.router.commands.AddCommand(useCmd)
 
 	registerCreateSubcommands(s)
+	registerUseSubcommands(s)
 
 	return nil
 }

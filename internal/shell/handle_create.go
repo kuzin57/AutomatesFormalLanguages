@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"fmt"
 	makeactions "workspace/internal/actions/make_actions"
 
 	"github.com/spf13/cobra"
@@ -41,6 +42,7 @@ func (h *createAutomateHandler) RunE(cmd *cobra.Command, args []string) error {
 		return action.Error
 	}
 
+	fmt.Println("name: ", action.Result().Adapter.GetName())
 	h.shell.Automates = append(h.shell.Automates, action.Result().Adapter)
 
 	return nil

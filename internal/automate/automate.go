@@ -28,6 +28,8 @@ func (a *nfa) Check() bool {
 
 func (a *nfa) Read(line string) (ok bool) {
 	curState := a.startState
+	// queueEmpties := make([]*state, 0)
+
 	for _, letter := range line {
 		curState, ok = curState.next[letter]
 		if !ok {

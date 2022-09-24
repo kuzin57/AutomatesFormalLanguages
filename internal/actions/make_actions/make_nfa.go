@@ -30,6 +30,7 @@ func NewMakeNFAAction(params *MakeNFAParams, adapter adapters.AutomateAdapter) (
 func (a *MakeNFAAction) Do() {
 	parts := strings.Split(a.params.Expr, "+")
 	automateAdapter := automatesadapters.NewAutomateAdapter(config.MakeAdaptersConfig(false))
+	automateAdapter.SetName(a.params.Name)
 
 	for _, part := range parts {
 		newAutomateAdapter := automatesadapters.NewAutomateAdapter(config.MakeAdaptersConfig(false))

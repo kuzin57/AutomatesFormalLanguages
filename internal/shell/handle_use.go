@@ -7,7 +7,7 @@ import (
 )
 
 func registerUseSubcommands(shell *Shell) {
-
+	makeUseReadCommand(shell)
 }
 
 func makeUseReadCommand(shell *Shell) {
