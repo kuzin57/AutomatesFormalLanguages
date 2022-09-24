@@ -20,23 +20,28 @@ func makeCreateAutomateCommand(shell *Shell) {
 	createCmd.AddCommand(cmd)
 
 	cmd.Flags().StringVarP(&handler.regularExpr, "regular", "r", "", "regular expression")
+	cmd.Flags().StringVarP(&handler.name, "name", "n", "", "name of automate")
 }
 
 type createAutomateHandler struct {
 	shell       *Shell
 	regularExpr string
+	name        string
 }
 
 func (h *createAutomateHandler) RunE(cmd *cobra.Command, args []string) error {
-	params := &makeactions.MakeNFAParams{Expr: h.regularExpr}
-	action, err := makeactions.NewMakeNFAAction(params)
+	params := &makeactions.MakeNFAParams{Expr: h.regularExpr, Name: h.name}
+	action, err := makeactions.NewMakeNFAAction(params, nil)
 	if err != nil {
 		return err
 	}
 
 	action.Do()
+	if action.CheckErr() {
+		return action.Error
+	}
 
-	// exprs := strings.Split(h.regularExpr, "+")
+	h.shell.Automates = append(h.shell.Automates, action.Result().Adapter)
 
 	return nil
 }

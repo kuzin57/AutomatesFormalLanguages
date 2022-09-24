@@ -7,6 +7,8 @@ import (
 )
 
 type faAutomateAdapter struct {
+	automate automate.Automate
+	name     string
 }
 
 func (a *faAutomateAdapter) Get() (automate.Automate, error) {
@@ -23,4 +25,16 @@ func (a *faAutomateAdapter) AddStar() error {
 
 func (a *faAutomateAdapter) Join(adapters.AutomateAdapter) error {
 	return customerrors.ErrNotImplemented
+}
+
+func (a *faAutomateAdapter) Read(word string) bool {
+	return false
+}
+
+func (a *faAutomateAdapter) GetName() string {
+	return a.name
+}
+
+func (a *faAutomateAdapter) SetName(name string) {
+	a.name = name
 }

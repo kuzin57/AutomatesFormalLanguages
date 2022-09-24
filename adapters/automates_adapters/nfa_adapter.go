@@ -1,7 +1,6 @@
 package automatesadapters
 
 import (
-	"fmt"
 	"strings"
 	"workspace/adapters"
 	"workspace/internal/automate"
@@ -10,6 +9,7 @@ import (
 
 type nfaAutomateAdapter struct {
 	automate automate.Automate
+	name     string
 }
 
 func (a *nfaAutomateAdapter) Get() (automate.Automate, error) {
@@ -23,7 +23,6 @@ func (a *nfaAutomateAdapter) Create(name string, words []string) (err error) {
 	a.automate = automate.NewNFA()
 	for _, word := range words {
 		switch {
-
 		case !strings.Contains(word, "*"):
 			err = a.automate.AddNewWord(word)
 			if err != nil {
@@ -35,7 +34,6 @@ func (a *nfaAutomateAdapter) Create(name string, words []string) (err error) {
 			parts := strings.Split(word, "*")
 
 			for _, part := range parts {
-				fmt.Println("part", part)
 				part = part[1:]
 				part = part[:len(part)-1]
 				newAutomate.AddNewWord(part)
@@ -61,6 +59,17 @@ func (a *nfaAutomateAdapter) Join(other adapters.AutomateAdapter) error {
 		return customerrors.ErrNoAutomate
 	}
 
-	a.automate.Join(realNFAAdapter.automate)
-	return nil
+	return a.automate.Join(realNFAAdapter.automate)
+}
+
+func (a *nfaAutomateAdapter) Read(word string) bool {
+	return a.automate.Read(word)
+}
+
+func (a *nfaAutomateAdapter) SetName(name string) {
+	a.name = name
+}
+
+func (a *nfaAutomateAdapter) GetName() string {
+	return a.name
 }

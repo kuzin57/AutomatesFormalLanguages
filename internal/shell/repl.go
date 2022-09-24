@@ -6,7 +6,6 @@ import (
 	"io"
 	"strconv"
 	"strings"
-	"workspace/internal/actions"
 
 	"workspace/internal/shell/shlex"
 
@@ -18,8 +17,6 @@ import (
 
 type commandRouter struct {
 	shell *Shell
-
-	adapters actions.ActionAdapters
 
 	line *liner.State
 

@@ -1,11 +1,16 @@
 package actions
 
+import (
+	"workspace/adapters"
+)
+
 type BaseAction struct {
-	Error error
+	Adapter adapters.AutomateAdapter
+	Error   error
 }
 
-func NewBaseAction() BaseAction {
-	return BaseAction{}
+func NewBaseAction(adapter adapters.AutomateAdapter) BaseAction {
+	return BaseAction{Adapter: adapter}
 }
 
 func (a BaseAction) CheckErr() bool {

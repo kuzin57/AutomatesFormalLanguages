@@ -5,4 +5,5 @@ import "errors"
 var (
 	ErrNotImplemented = errors.New("not implemented")
 	ErrNoAutomate     = errors.New("no automate")
+	ErrNoSuchWord     = errors.New("no such word")
 )

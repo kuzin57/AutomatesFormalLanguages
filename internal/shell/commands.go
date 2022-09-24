@@ -7,4 +7,9 @@ var (
 		Use:   "create",
 		Short: "create automate",
 	}
+
+	useCmd = &cobra.Command{
+		Use:   "use",
+		Short: "use automate",
+	}
 )

@@ -6,11 +6,11 @@ import (
 )
 
 func NewNFA() *nfa {
-	return &nfa{startState: &state{isTerm: false, next: make(map[string]*state)}}
+	return &nfa{startState: &state{isTerm: false, next: make(map[rune]*state)}}
 }
 
 func NewFA() *fa {
-	return &fa{startState: &state{isTerm: false, next: make(map[string]*state)}}
+	return &fa{startState: &state{isTerm: false, next: make(map[rune]*state)}}
 }
 
 type nfa struct {
@@ -26,23 +26,28 @@ func (a *nfa) Check() bool {
 	return false
 }
 
-func (a *nfa) Read(line string) (string, error) {
-	return "", nil
+func (a *nfa) Read(line string) (ok bool) {
+	curState := a.startState
+	for _, letter := range line {
+		curState, ok = curState.next[letter]
+		if !ok {
+			return
+		}
+	}
+	return true
 }
 
 func (a *nfa) AddNewWord(word string) error {
 	curState := a.startState
-	for len(word) > 0 {
-		letter := word[0:1]
+	for _, letter := range word {
 		_, ok := curState.next[letter]
 		switch ok {
 		case true:
 			curState = curState.next[letter]
 		case false:
-			curState.next[letter] = &state{isTerm: false, next: make(map[string]*state)}
+			curState.next[letter] = &state{isTerm: false, next: make(map[rune]*state)}
 			curState = curState.next[letter]
 		}
-		word = word[1:]
 	}
 
 	curState.isTerm = true
@@ -76,7 +81,7 @@ func (a *nfa) Join(other Automate) error {
 		return fmt.Errorf("can not join automates of different types")
 	}
 
-	newStartState := &state{next: make(map[string]*state)}
+	newStartState := &state{next: make(map[rune]*state)}
 
 	newStartState.next[emptyWord] = a.startState
 	newStartState.next[emptyWord] = realAutomate.startState
@@ -93,8 +98,8 @@ func (a *fa) DeleteEps() error {
 	return customerrors.ErrNotImplemented
 }
 
-func (a *fa) Read(line string) (string, error) {
-	return "", nil
+func (a *fa) Read(line string) bool {
+	return false
 }
 
 func (a *fa) Check() bool {
@@ -113,7 +118,11 @@ func (a *fa) Join(other Automate) error {
 	return customerrors.ErrNotImplemented
 }
 
+func (a *fa) Cycle() error {
+	return customerrors.ErrNotImplemented
+}
+
 type state struct {
-	next   map[string]*state
+	next   map[rune]*state
 	isTerm bool
 }

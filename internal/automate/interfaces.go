@@ -2,7 +2,7 @@ package automate
 
 type Automate interface {
 	DeleteEps() error
-	Read(string) (string, error)
+	Read(string) bool
 	Check() bool
 	AddNewWord(string) error
 	Cycle() error

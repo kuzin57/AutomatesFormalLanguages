@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"workspace/internal/automate"
+	"workspace/adapters"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/peterh/liner"
@@ -14,7 +14,7 @@ import (
 
 type Shell struct {
 	router   *commandRouter
-	Automate automate.Automate
+	Automates []adapters.AutomateAdapter
 	prompt   string
 }
 

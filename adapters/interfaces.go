@@ -9,4 +9,7 @@ type AutomateAdapter interface {
 	Create(string, []string) error
 	AddStar() error
 	Join(AutomateAdapter) error
+	Read(string) bool
+	GetName() string
+	SetName(string)
 }
