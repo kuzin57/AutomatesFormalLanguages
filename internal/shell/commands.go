@@ -12,4 +12,9 @@ var (
 		Use:   "use",
 		Short: "use automate",
 	}
+
+	modifyCmd = &cobra.Command{
+		Use:   "modify",
+		Short: "modify automate",
+	}
 )

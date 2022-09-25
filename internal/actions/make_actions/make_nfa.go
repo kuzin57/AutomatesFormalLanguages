@@ -14,6 +14,7 @@ type MakeNFAParams struct {
 
 type MakeNFAAction struct {
 	actions.BaseAction
+
 	params *MakeNFAParams
 	result *MakeNFAResult
 }
@@ -31,10 +32,6 @@ func (a *MakeNFAAction) Do() {
 	automateAdapter.SetName(a.params.Name)
 
 	newAutomateAdapter := automatesadapters.NewAutomateAdapter(config.MakeAdaptersConfig(false))
-
-	// part = part[1:]
-	// part = part[:len(part)-1]
-	// smallerParts := strings.Split(part, ",")
 
 	newAutomateAdapter.Create(a.params.Name, a.params.Expr)
 	if a.Error = automateAdapter.Join(newAutomateAdapter); a.CheckErr() {

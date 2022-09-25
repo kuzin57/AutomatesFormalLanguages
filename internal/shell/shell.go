@@ -53,9 +53,11 @@ func (s *Shell) Init() error {
 	s.router.commands = &cobra.Command{}
 	s.router.commands.AddCommand(createCmd)
 	s.router.commands.AddCommand(useCmd)
+	s.router.commands.AddCommand(modifyCmd)
 
 	registerCreateSubcommands(s)
 	registerUseSubcommands(s)
+	registerModifySubcommands(s)
 
 	return nil
 }

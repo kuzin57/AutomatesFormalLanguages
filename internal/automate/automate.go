@@ -19,7 +19,46 @@ type nfa struct {
 }
 
 func (a *nfa) DeleteEps() error {
-	return customerrors.ErrNotImplemented
+	type stateAndIndex struct {
+		state      *state
+		indexEmpty int
+	}
+
+	stackStates := make([]*stateAndIndex, 1)
+	stackStates[0] = &stateAndIndex{state: a.startState}
+	cur := stackStates[0]
+
+	for len(stackStates) > 0 {
+		cur = stackStates[len(stackStates)-1]
+
+		for key, val := range cur.state.next {
+			if key == emptyWord {
+				continue
+			}
+
+			for i := 0; i < len(stackStates)-1; i++ {
+				stackStates[i].state.next[key] = append(stackStates[i].state.next[key], val...)
+			}
+
+			if cur.state.isTerm {
+				for i := 0; i < len(stackStates); i++ {
+					stackStates[i].state.isTerm = true
+				}
+			}
+		}
+
+		stateWithEmpty, empty := cur.state.next[emptyWord]
+		if !empty || cur.indexEmpty == len(cur.state.next[emptyWord]) {
+			stackStates = stackStates[:len(stackStates)-1]
+			delete(cur.state.next, emptyWord)
+			continue
+		}
+
+		stackStates = append(stackStates, &stateAndIndex{state: stateWithEmpty[0]})
+		cur.indexEmpty++
+	}
+
+	return nil
 }
 
 func (a *nfa) Check() bool {
@@ -82,6 +121,7 @@ func (a *nfa) putStartState(automate Automate) error {
 	}
 
 	a.startState = realAutomate.startState
+	a.terminals = realAutomate.terminals
 	return nil
 }
 
@@ -106,11 +146,10 @@ func (a *nfa) AddNewWord(word string) error {
 	return nil
 }
 
-func (a *nfa) GetStartState() *state {
-	return a.startState
-}
-
 func (a *nfa) Cycle() error {
+	a.startState.isTerm = true
+	a.terminals = append(a.terminals, a.startState)
+
 	for _, term := range a.terminals {
 		term.next[emptyWord] = append(term.next[emptyWord], a.startState)
 	}
@@ -123,10 +162,15 @@ func (a *nfa) Concat(other Automate) error {
 		return fmt.Errorf("can not concat automates of different types")
 	}
 
+	if len(a.startState.next) == 0 {
+		return a.putStartState(other)
+	}
+
 	for _, term := range a.terminals {
 		term.isTerm = false
 		term.next[emptyWord] = append(term.next[emptyWord], realAutomate.startState)
 	}
+	a.terminals = realAutomate.terminals
 	return nil
 }
 
@@ -141,6 +185,7 @@ func (a *nfa) Join(other Automate) error {
 	}
 
 	a.startState.next[emptyWord] = append(a.startState.next[emptyWord], realAutomate.startState)
+	a.terminals = append(a.terminals, realAutomate.terminals...)
 	return nil
 }
 
@@ -178,10 +223,6 @@ func (a *fa) Cycle() error {
 
 func (a *fa) putStartState(automate Automate) error {
 	return customerrors.ErrNotImplemented
-}
-
-func (a *fa) GetStartState() *state {
-	return nil
 }
 
 type state struct {

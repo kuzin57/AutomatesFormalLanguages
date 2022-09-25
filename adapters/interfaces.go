@@ -12,4 +12,5 @@ type AutomateAdapter interface {
 	Read(string) error
 	GetName() string
 	SetName(string)
+	DeleteEps() error
 }

@@ -38,3 +38,7 @@ func (a *faAutomateAdapter) GetName() string {
 func (a *faAutomateAdapter) SetName(name string) {
 	a.name = name
 }
+
+func (a *faAutomateAdapter) DeleteEps() error {
+	return customerrors.ErrNotImplemented
+}

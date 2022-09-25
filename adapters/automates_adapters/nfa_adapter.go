@@ -32,7 +32,11 @@ func (a *nfaAutomateAdapter) Create(name string, line string) (err error) {
 		line = line[:len(line)-1]
 	}
 
-	subexprs, err = a.parseLine(line)
+	subexprs, err = a.parseLine(line, '+')
+	if err != nil {
+		return
+	}
+
 	for _, subexpr := range subexprs {
 		if !strings.Contains(subexpr, "+") {
 			switch {
@@ -52,7 +56,7 @@ func (a *nfaAutomateAdapter) Create(name string, line string) (err error) {
 					part = part[:len(part)-1]
 
 					var subparts []string
-					subparts, err = a.parseLine(part)
+					subparts, err = a.parseLine(part, '+')
 					if err != nil {
 						return
 					}
@@ -73,8 +77,30 @@ func (a *nfaAutomateAdapter) Create(name string, line string) (err error) {
 			}
 			continue
 		}
+
+		if !a.check(subexpr, '+') && a.check(subexpr, '.') {
+			var regulars []string
+			regulars, err = a.parseLine(line, '.')
+			if err != nil {
+				return
+			}
+
+			auto := automate.NewNFA()
+			for _, regular := range regulars {
+				adapter := nfaAutomateAdapter{automate: automate.NewNFA()}
+				err = adapter.Create("", regular)
+				if err != nil {
+					return
+				}
+				auto.Concat(adapter.automate)
+			}
+
+			a.automate.Join(auto)
+			continue
+		}
+
 		var words []string
-		words, err = a.parseLine(subexpr)
+		words, err = a.parseLine(subexpr, '+')
 		if err != nil {
 			return
 		}
@@ -94,7 +120,7 @@ func (a *nfaAutomateAdapter) Create(name string, line string) (err error) {
 	return
 }
 
-func (a *nfaAutomateAdapter) parseLine(line string) ([]string, error) {
+func (a *nfaAutomateAdapter) parseLine(line string, sep rune) ([]string, error) {
 	var (
 		balance int
 		curWord string
@@ -113,7 +139,7 @@ func (a *nfaAutomateAdapter) parseLine(line string) ([]string, error) {
 			if i < len(line)-1 {
 				curWord += string(char)
 			}
-		case char == '+' && balance == 1:
+		case char == sep && balance == 1:
 			ans = append(ans, curWord)
 			curWord = ""
 		default:
@@ -129,6 +155,21 @@ func (a *nfaAutomateAdapter) parseLine(line string) ([]string, error) {
 	}
 
 	return ans, nil
+}
+
+func (a *nfaAutomateAdapter) check(line string, sep rune) bool {
+	var balance int
+	for _, char := range line {
+		switch {
+		case char == '(':
+			balance++
+		case char == ')':
+			balance--
+		case char == sep && balance == 0:
+			return true
+		}
+	}
+	return false
 }
 
 func (a *nfaAutomateAdapter) AddStar() error {
@@ -158,4 +199,8 @@ func (a *nfaAutomateAdapter) SetName(name string) {
 
 func (a *nfaAutomateAdapter) GetName() string {
 	return a.name
+}
+
+func (a *nfaAutomateAdapter) DeleteEps() error {
+	return a.automate.DeleteEps()
 }
