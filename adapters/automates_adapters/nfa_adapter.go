@@ -1,7 +1,6 @@
 package automatesadapters
 
 import (
-	"fmt"
 	"strings"
 	"workspace/adapters"
 	"workspace/internal/automate"
@@ -23,10 +22,18 @@ func (a *nfaAutomateAdapter) Get() (automate.Automate, error) {
 func (a *nfaAutomateAdapter) Create(name string, line string) (err error) {
 	a.automate = automate.NewNFA()
 
-	var subexprs []string
+	var (
+		subexprs     []string
+		needCircling bool
+	)
+
+	if line[len(line)-1] == '*' {
+		needCircling = true
+		line = line[:len(line)-1]
+	}
+
 	subexprs, err = a.parseLine(line)
 	for _, subexpr := range subexprs {
-		fmt.Println("err:", a.automate.Read("ac"), a.automate.GetStartState())
 		if !strings.Contains(subexpr, "+") {
 			switch {
 			case !strings.Contains(subexpr, "*"):
@@ -39,7 +46,6 @@ func (a *nfaAutomateAdapter) Create(name string, line string) (err error) {
 				newAutomate := automate.NewNFA()
 				parts := strings.Split(subexpr, "*")
 				parts = parts[:len(parts)-1]
-
 				for _, part := range parts {
 					circledAutomate := automate.NewNFA()
 					part = part[1:]
@@ -80,6 +86,10 @@ func (a *nfaAutomateAdapter) Create(name string, line string) (err error) {
 			newAuto.Join(newAdapter.automate)
 		}
 		a.automate.Join(newAuto)
+	}
+
+	if needCircling {
+		err = a.automate.Cycle()
 	}
 	return
 }

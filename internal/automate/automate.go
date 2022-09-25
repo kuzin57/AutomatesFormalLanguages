@@ -34,20 +34,15 @@ func (a *nfa) Read(word string) error {
 		wordIndex  int
 	}
 
-	usedStates := make(map[*stateAndIndex]bool)
-
 	stackStates := make([]*stateAndIndex, 1)
 	stackStates[0] = &stateAndIndex{state: a.startState}
 	cur := stackStates[0]
 	cur.wordIndex = 0
 
 	for len(stackStates) > 0 {
-		_, ok := usedStates[cur]
-		if ok {
-			stackStates = nil
-		}
+		cur = stackStates[len(stackStates)-1]
 
-		if cur.wordIndex == len(word) {
+		if cur.wordIndex == len(word) && cur.state.isTerm {
 			return nil
 		}
 
@@ -59,13 +54,11 @@ func (a *nfa) Read(word string) error {
 			)
 
 			cur.indexEmpty++
-			cur = stackStates[len(stackStates)-1]
 			continue
 		}
 
-		_, ok = cur.state.next[rune(word[cur.wordIndex])]
+		_, ok := cur.state.next[rune(word[cur.wordIndex])]
 		if !ok || cur.stateIndex == len(cur.state.next[rune(word[cur.wordIndex])]) {
-			cur = stackStates[len(stackStates)-1]
 			stackStates = stackStates[:len(stackStates)-1]
 			continue
 		}
@@ -78,7 +71,6 @@ func (a *nfa) Read(word string) error {
 		)
 
 		cur.stateIndex++
-		cur = stackStates[len(stackStates)-1]
 	}
 	return customerrors.ErrNoSuchWord
 }
@@ -94,9 +86,6 @@ func (a *nfa) putStartState(automate Automate) error {
 }
 
 func (a *nfa) AddNewWord(word string) error {
-	fmt.Println("start state before:", a.startState)
-	// curState := a.startState
-	// var curState *state
 	curState := a.startState
 	for _, letter := range word {
 		_, ok := curState.next[letter]
@@ -114,7 +103,6 @@ func (a *nfa) AddNewWord(word string) error {
 
 	curState.isTerm = true
 	a.terminals = append(a.terminals, curState)
-	fmt.Println("start state after:", a.startState)
 	return nil
 }
 
@@ -153,7 +141,6 @@ func (a *nfa) Join(other Automate) error {
 	}
 
 	a.startState.next[emptyWord] = append(a.startState.next[emptyWord], realAutomate.startState)
-
 	return nil
 }
 
