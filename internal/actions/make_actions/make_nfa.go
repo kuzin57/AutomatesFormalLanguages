@@ -1,7 +1,6 @@
 package makeactions
 
 import (
-	"strings"
 	"workspace/adapters"
 	automatesadapters "workspace/adapters/automates_adapters"
 	"workspace/internal/actions"
@@ -28,22 +27,18 @@ func NewMakeNFAAction(params *MakeNFAParams, adapter adapters.AutomateAdapter) (
 }
 
 func (a *MakeNFAAction) Do() {
-	parts := strings.Split(a.params.Expr, "+")
 	automateAdapter := automatesadapters.NewAutomateAdapter(config.MakeAdaptersConfig(false))
 	automateAdapter.SetName(a.params.Name)
 
-	for _, part := range parts {
-		newAutomateAdapter := automatesadapters.NewAutomateAdapter(config.MakeAdaptersConfig(false))
+	newAutomateAdapter := automatesadapters.NewAutomateAdapter(config.MakeAdaptersConfig(false))
 
-		part = part[1:]
-		part = part[:len(part)-1]
-		smallerParts := strings.Split(part, ",")
+	// part = part[1:]
+	// part = part[:len(part)-1]
+	// smallerParts := strings.Split(part, ",")
 
-		newAutomateAdapter.Create(a.params.Name, smallerParts)
-		if a.Error = automateAdapter.Join(newAutomateAdapter); a.CheckErr() {
-			return
-		}
-
+	newAutomateAdapter.Create(a.params.Name, a.params.Expr)
+	if a.Error = automateAdapter.Join(newAutomateAdapter); a.CheckErr() {
+		return
 	}
 
 	a.result = &MakeNFAResult{Adapter: automateAdapter}

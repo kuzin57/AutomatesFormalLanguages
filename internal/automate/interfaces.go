@@ -2,10 +2,12 @@ package automate
 
 type Automate interface {
 	DeleteEps() error
-	Read(string) bool
+	Read(string) error
 	Check() bool
 	AddNewWord(string) error
 	Cycle() error
 	Concat(Automate) error
 	Join(Automate) error
+	putStartState(Automate) error
+	GetStartState() *state
 }

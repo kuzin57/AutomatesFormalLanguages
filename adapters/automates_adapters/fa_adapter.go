@@ -15,7 +15,7 @@ func (a *faAutomateAdapter) Get() (automate.Automate, error) {
 	return nil, customerrors.ErrNotImplemented
 }
 
-func (a *faAutomateAdapter) Create(string, []string) error {
+func (a *faAutomateAdapter) Create(string, string) error {
 	return customerrors.ErrNotImplemented
 }
 
@@ -27,8 +27,8 @@ func (a *faAutomateAdapter) Join(adapters.AutomateAdapter) error {
 	return customerrors.ErrNotImplemented
 }
 
-func (a *faAutomateAdapter) Read(word string) bool {
-	return false
+func (a *faAutomateAdapter) Read(word string) error {
+	return customerrors.ErrNotImplemented
 }
 
 func (a *faAutomateAdapter) GetName() string {

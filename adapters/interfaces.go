@@ -6,10 +6,10 @@ import (
 
 type AutomateAdapter interface {
 	Get() (automate.Automate, error)
-	Create(string, []string) error
+	Create(string, string) error
 	AddStar() error
 	Join(AutomateAdapter) error
-	Read(string) bool
+	Read(string) error
 	GetName() string
 	SetName(string)
 }

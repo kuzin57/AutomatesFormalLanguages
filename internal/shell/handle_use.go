@@ -33,14 +33,12 @@ type useReadHandler struct {
 func (h *useReadHandler) RunE(cmd *cobra.Command, args []string) error {
 	for _, adapter := range h.shell.Automates {
 		if adapter.GetName() == h.name {
-			ok := adapter.Read(h.word)
-			switch ok {
-			case false:
-				fmt.Println("No such word!")
-			default:
-				fmt.Println("Word found!")
+			err := adapter.Read(h.word)
+			if err != nil {
+				return err
 			}
 		}
 	}
+	fmt.Println("word exists!")
 	return nil
 }
