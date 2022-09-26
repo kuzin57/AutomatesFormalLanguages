@@ -19,88 +19,32 @@ func (a *nfaAutomateAdapter) Get() (automate.Automate, error) {
 	return a.automate, nil
 }
 
-func (a *nfaAutomateAdapter) Create(name string, line string) (err error) {
+func (a *nfaAutomateAdapter) Create(name string, expr string) (err error) {
 	a.automate = automate.NewNFA()
 
-	var (
-		subexprs     []string
-		needCircling bool
-	)
-
-	if line[len(line)-1] == '*' {
-		needCircling = true
-		line = line[:len(line)-1]
-	}
-
-	subexprs, err = a.parseLine(line, '+')
-	if err != nil {
-		return
-	}
-
-	for _, subexpr := range subexprs {
-		if !strings.Contains(subexpr, "+") {
-			switch {
-			case !strings.Contains(subexpr, "*"):
-				err = a.automate.AddNewWord(subexpr)
-				if err != nil {
-					return
-				}
-
-			default:
-				newAutomate := automate.NewNFA()
-				parts := strings.Split(subexpr, "*")
-				parts = parts[:len(parts)-1]
-				for _, part := range parts {
-					circledAutomate := automate.NewNFA()
-					part = part[1:]
-					part = part[:len(part)-1]
-
-					var subparts []string
-					subparts, err = a.parseLine(part, '+')
-					if err != nil {
-						return
-					}
-
-					for _, p := range subparts {
-						if err = circledAutomate.AddNewWord(p); err != nil {
-							return
-						}
-					}
-
-					if err = circledAutomate.Cycle(); err != nil {
-						return
-					}
-					newAutomate.Join(circledAutomate)
-				}
-
-				a.automate.Join(newAutomate)
-			}
-			continue
+	switch {
+	case !a.check(expr, '+') && a.check(expr, '.'):
+		var regulars []string
+		regulars, err = a.parseExpr(expr, '.')
+		if err != nil {
+			return
 		}
 
-		if !a.check(subexpr, '+') && a.check(subexpr, '.') {
-			var regulars []string
-			regulars, err = a.parseLine(line, '.')
+		auto := automate.NewNFA()
+		for _, regular := range regulars {
+			adapter := nfaAutomateAdapter{automate: automate.NewNFA()}
+			err = adapter.Create("", regular)
 			if err != nil {
 				return
 			}
-
-			auto := automate.NewNFA()
-			for _, regular := range regulars {
-				adapter := nfaAutomateAdapter{automate: automate.NewNFA()}
-				err = adapter.Create("", regular)
-				if err != nil {
-					return
-				}
-				auto.Concat(adapter.automate)
-			}
-
-			a.automate.Join(auto)
-			continue
+			auto.Concat(adapter.automate)
 		}
 
+		a.automate.Join(auto)
+
+	case a.check(expr, '+'):
 		var words []string
-		words, err = a.parseLine(subexpr, '+')
+		words, err = a.parseExpr(expr, '+')
 		if err != nil {
 			return
 		}
@@ -112,22 +56,42 @@ func (a *nfaAutomateAdapter) Create(name string, line string) (err error) {
 			newAuto.Join(newAdapter.automate)
 		}
 		a.automate.Join(newAuto)
+
+	case len(expr) >= 2 && expr[len(expr)-2] == '*':
+		newAdapter := nfaAutomateAdapter{automate: automate.NewNFA()}
+		expr = expr[1:]
+		expr = expr[:len(expr)-2]
+
+		if err = newAdapter.Create("", expr); err != nil {
+			return
+		}
+
+		if err = newAdapter.automate.Cycle(); err != nil {
+			return
+		}
+		a.automate.Join(newAdapter.automate)
+
+	case !strings.Contains(expr, "+"):
+		expr = expr[1:]
+		expr = expr[:len(expr)-1]
+		err = a.automate.AddNewWord(expr)
+		if err != nil {
+			return
+		}
+
 	}
 
-	if needCircling {
-		err = a.automate.Cycle()
-	}
 	return
 }
 
-func (a *nfaAutomateAdapter) parseLine(line string, sep rune) ([]string, error) {
+func (a *nfaAutomateAdapter) parseExpr(expr string, sep rune) ([]string, error) {
 	var (
 		balance int
 		curWord string
 		ans     []string
 	)
 
-	for i, char := range line {
+	for i, char := range expr {
 		switch {
 		case char == '(':
 			balance++
@@ -136,7 +100,7 @@ func (a *nfaAutomateAdapter) parseLine(line string, sep rune) ([]string, error) 
 			}
 		case char == ')':
 			balance--
-			if i < len(line)-1 {
+			if i < len(expr)-1 {
 				curWord += string(char)
 			}
 		case char == sep && balance == 1:
@@ -157,15 +121,15 @@ func (a *nfaAutomateAdapter) parseLine(line string, sep rune) ([]string, error) 
 	return ans, nil
 }
 
-func (a *nfaAutomateAdapter) check(line string, sep rune) bool {
+func (a *nfaAutomateAdapter) check(expr string, sep rune) bool {
 	var balance int
-	for _, char := range line {
+	for _, char := range expr {
 		switch {
 		case char == '(':
 			balance++
 		case char == ')':
 			balance--
-		case char == sep && balance == 0:
+		case char == sep && balance == 1:
 			return true
 		}
 	}

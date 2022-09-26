@@ -23,10 +23,9 @@ func (a *nfa) DeleteEps() error {
 		state      *state
 		indexEmpty int
 	}
-
 	stackStates := make([]*stateAndIndex, 1)
 	stackStates[0] = &stateAndIndex{state: a.startState}
-	cur := stackStates[0]
+	var cur *stateAndIndex
 
 	for len(stackStates) > 0 {
 		cur = stackStates[len(stackStates)-1]
@@ -48,16 +47,15 @@ func (a *nfa) DeleteEps() error {
 		}
 
 		stateWithEmpty, empty := cur.state.next[emptyWord]
-		if !empty || cur.indexEmpty == len(cur.state.next[emptyWord]) {
+		if !empty || cur.indexEmpty == len(stateWithEmpty) {
 			stackStates = stackStates[:len(stackStates)-1]
 			delete(cur.state.next, emptyWord)
 			continue
 		}
 
-		stackStates = append(stackStates, &stateAndIndex{state: stateWithEmpty[0]})
+		stackStates = append(stackStates, &stateAndIndex{state: stateWithEmpty[cur.indexEmpty]})
 		cur.indexEmpty++
 	}
-
 	return nil
 }
 
@@ -75,8 +73,7 @@ func (a *nfa) Read(word string) error {
 
 	stackStates := make([]*stateAndIndex, 1)
 	stackStates[0] = &stateAndIndex{state: a.startState}
-	cur := stackStates[0]
-	cur.wordIndex = 0
+	var cur *stateAndIndex
 
 	for len(stackStates) > 0 {
 		cur = stackStates[len(stackStates)-1]
@@ -91,13 +88,16 @@ func (a *nfa) Read(word string) error {
 				stackStates,
 				&stateAndIndex{state: cur.state.next[emptyWord][cur.indexEmpty], wordIndex: cur.wordIndex},
 			)
-
 			cur.indexEmpty++
 			continue
 		}
 
-		_, ok := cur.state.next[rune(word[cur.wordIndex])]
-		if !ok || cur.stateIndex == len(cur.state.next[rune(word[cur.wordIndex])]) {
+		var ok bool
+		if len(word) > cur.wordIndex {
+			_, ok = cur.state.next[rune(word[cur.wordIndex])]
+		}
+
+		if len(word) == cur.wordIndex || !ok || cur.stateIndex == len(cur.state.next[rune(word[cur.wordIndex])]) {
 			stackStates = stackStates[:len(stackStates)-1]
 			continue
 		}
@@ -148,11 +148,12 @@ func (a *nfa) AddNewWord(word string) error {
 
 func (a *nfa) Cycle() error {
 	a.startState.isTerm = true
-	a.terminals = append(a.terminals, a.startState)
 
 	for _, term := range a.terminals {
 		term.next[emptyWord] = append(term.next[emptyWord], a.startState)
 	}
+	a.terminals = append(a.terminals, a.startState)
+
 	return nil
 }
 
@@ -170,6 +171,7 @@ func (a *nfa) Concat(other Automate) error {
 		term.isTerm = false
 		term.next[emptyWord] = append(term.next[emptyWord], realAutomate.startState)
 	}
+
 	a.terminals = realAutomate.terminals
 	return nil
 }
