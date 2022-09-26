@@ -10,6 +10,7 @@ import (
 
 func registerModifySubcommands(shell *Shell) {
 	makeModifyEpsCommand(shell)
+	makeModifyDetCommand(shell)
 }
 
 func makeModifyEpsCommand(shell *Shell) {
@@ -23,6 +24,20 @@ func makeModifyEpsCommand(shell *Shell) {
 	modifyCmd.AddCommand(cmd)
 
 	cmd.Flags().StringVarP(&handler.name, "name", "n", "", "name of automate")
+}
+
+func makeModifyDetCommand(shell *Shell) {
+	handler := &modifyDetHandler{shell: shell}
+	cmd := &cobra.Command{
+		Use:   "det",
+		Short: "determinize automate",
+		RunE:  handler.RunE,
+	}
+
+	modifyCmd.AddCommand(cmd)
+
+	cmd.Flags().StringVarP(&handler.nfaName, "name", "n", "", "name of non det automate")
+	cmd.Flags().StringVarP(&handler.name, "detname", "d", "", "name of det automate")
 }
 
 type modifyEpsHandler struct {
@@ -46,10 +61,37 @@ func (h *modifyEpsHandler) RunE(cmd *cobra.Command, args []string) error {
 			if err = action.Error; err != nil {
 				return err
 			}
-
-			// adapter = action.Result().Adapter
 		}
 	}
 	fmt.Println("success!")
+	return nil
+}
+
+type modifyDetHandler struct {
+	shell   *Shell
+	name    string
+	nfaName string
+}
+
+func (h *modifyDetHandler) RunE(cmd *cobra.Command, args []string) error {
+	params := modifyactions.DeterminizeParams{}
+	for _, adapter := range h.shell.Automates {
+		if adapter.GetName() == h.nfaName {
+			params.NFA = adapter
+
+			action, err := modifyactions.NewDeterminizeAction(&params)
+			if err != nil {
+				return err
+			}
+
+			action.Do()
+			if err = action.Error; err != nil {
+				return err
+			}
+
+			h.shell.Automates = append(h.shell.Automates, action.Result().FA)
+		}
+	}
+
 	return nil
 }

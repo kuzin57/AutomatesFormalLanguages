@@ -1,6 +1,7 @@
 package automatesadapters
 
 import (
+	"fmt"
 	"workspace/adapters"
 	"workspace/internal/automate"
 	customerrors "workspace/internal/errors"
@@ -9,6 +10,27 @@ import (
 type faAutomateAdapter struct {
 	automate automate.Automate
 	name     string
+}
+
+func NewFAadapter(other adapters.AutomateAdapter, name string) (*nfaAutomateAdapter, error) {
+	var err error
+	realAutomate, ok := other.(*nfaAutomateAdapter)
+	if !ok {
+		return nil, fmt.Errorf("nfa adapter expected")
+	}
+
+	res := &faAutomateAdapter{name: name}
+	res.automate, err = automate.NewFAFromNFA(realAutomate.automate)
+	if err != nil {
+		return nil, err
+	}
+
+	a, _ := automate.NewNFAFromFA(res.automate)
+	ans := &nfaAutomateAdapter{}
+	ans.name = realAutomate.name
+	ans.automate = a
+
+	return ans, nil
 }
 
 func (a *faAutomateAdapter) Get() (automate.Automate, error) {
