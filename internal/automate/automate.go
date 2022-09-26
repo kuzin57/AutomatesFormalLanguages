@@ -195,6 +195,10 @@ type fa struct {
 	startState *state
 }
 
+func MakeFAfromNFA(a *nfa) *fa {
+	return nil
+}
+
 func (a *fa) DeleteEps() error {
 	return customerrors.ErrNotImplemented
 }
