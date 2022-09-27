@@ -9,4 +9,5 @@ type Automate interface {
 	Concat(Automate) error
 	Join(Automate) error
 	putStartState(Automate) error
+	GetStates() ([]*State, error)
 }

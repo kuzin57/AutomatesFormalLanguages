@@ -2,12 +2,16 @@ package shell
 
 import (
 	"fmt"
+	"strings"
+
+	showactions "workspace/internal/actions/show_actions"
 
 	"github.com/spf13/cobra"
 )
 
 func registerUseSubcommands(shell *Shell) {
 	makeUseReadCommand(shell)
+	makeUseShowCommand(shell)
 }
 
 func makeUseReadCommand(shell *Shell) {
@@ -22,6 +26,19 @@ func makeUseReadCommand(shell *Shell) {
 
 	cmd.Flags().StringVarP(&handler.name, "name", "n", "", "name of automate")
 	cmd.Flags().StringVarP(&handler.word, "word", "w", "", "word for reading")
+}
+
+func makeUseShowCommand(shell *Shell) {
+	handler := &useShowHandler{shell: shell}
+	cmd := &cobra.Command{
+		Use:   "show",
+		Short: "show states",
+		RunE:  handler.RunE,
+	}
+
+	useCmd.AddCommand(cmd)
+
+	cmd.Flags().StringVarP(&handler.name, "name", "n", "", "name of automate")
 }
 
 type useReadHandler struct {
@@ -40,5 +57,36 @@ func (h *useReadHandler) RunE(cmd *cobra.Command, args []string) error {
 		}
 	}
 	fmt.Println("word exists!")
+	return nil
+}
+
+type useShowHandler struct {
+	shell *Shell
+	name  string
+}
+
+func (h *useShowHandler) RunE(cmd *cobra.Command, args []string) (err error) {
+	buf := &strings.Builder{}
+	params := &showactions.ShowStatesParams{Buffer: buf}
+
+	for _, adapter := range h.shell.Automates {
+		if adapter.GetName() == h.name {
+			params.Adapter = adapter
+			break
+		}
+	}
+
+	action, err := showactions.NewShowStatesAction(params)
+	if err != nil {
+		return err
+	}
+
+	action.Do()
+	if err = action.Error; err != nil {
+		return err
+	}
+
+	h.shell.printTable(buf.String())
+
 	return nil
 }

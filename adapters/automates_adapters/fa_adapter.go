@@ -12,7 +12,7 @@ type faAutomateAdapter struct {
 	name     string
 }
 
-func NewFAadapter(other adapters.AutomateAdapter, name string) (*nfaAutomateAdapter, error) {
+func NewFAadapter(other adapters.AutomateAdapter, name string) (adapters.AutomateAdapter, error) {
 	var err error
 	realAutomate, ok := other.(*nfaAutomateAdapter)
 	if !ok {
@@ -25,16 +25,19 @@ func NewFAadapter(other adapters.AutomateAdapter, name string) (*nfaAutomateAdap
 		return nil, err
 	}
 
-	a, _ := automate.NewNFAFromFA(res.automate)
-	ans := &nfaAutomateAdapter{}
-	ans.name = realAutomate.name
-	ans.automate = a
+	ans := &faAutomateAdapter{}
+	ans.automate = res.automate
+	ans.name = name
 
 	return ans, nil
 }
 
 func (a *faAutomateAdapter) Get() (automate.Automate, error) {
 	return nil, customerrors.ErrNotImplemented
+}
+
+func (a *faAutomateAdapter) GetStates() ([]*automate.State, error) {
+	return a.automate.GetStates()
 }
 
 func (a *faAutomateAdapter) Create(string, string) error {
@@ -50,7 +53,7 @@ func (a *faAutomateAdapter) Join(adapters.AutomateAdapter) error {
 }
 
 func (a *faAutomateAdapter) Read(word string) error {
-	return customerrors.ErrNotImplemented
+	return a.automate.Read(word)
 }
 
 func (a *faAutomateAdapter) GetName() string {

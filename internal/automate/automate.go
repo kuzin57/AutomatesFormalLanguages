@@ -21,8 +21,8 @@ func NewFAFromNFA(other Automate) (*fa, error) {
 	}
 
 	alphabet := make(map[rune]bool)
-	getAlphabet(a.startState, &alphabet)
-	fmt.Println("alphabet", alphabet)
+	used := make(map[*state]bool)
+	getAlphabet(a.startState, &alphabet, &used)
 
 	sets := make([]*map[*state]bool, 1)
 	transitions := make(map[int]map[rune]int, 0)
@@ -40,18 +40,18 @@ func NewFAFromNFA(other Automate) (*fa, error) {
 			newSetAdded bool
 		)
 
-		transitions[setsIndex] = map[rune]int{}
+		transitions[setsIndex] = make(map[rune]int)
 		newSets := make([]*map[*state]bool, len(alphabet))
 		for letter := range alphabet {
 			newSets[index] = &map[*state]bool{}
 
 			for key := range *(sets[setsIndex]) {
-				for _, st := range (*key).next[letter] {
+				for _, st := range key.next[letter] {
 					(*(newSets[index]))[st] = true
 				}
 			}
 
-			if *(newSets[index]) == nil {
+			if *(newSets[index]) == nil || len(*(newSets[index])) == 0 {
 				index++
 				continue
 			}
@@ -77,10 +77,10 @@ func NewFAFromNFA(other Automate) (*fa, error) {
 			index++
 		}
 
-		if !newSetAdded {
+		setsIndex++
+		if !newSetAdded && setsIndex == len(sets) {
 			break
 		}
-		setsIndex++
 	}
 
 	created := make(map[int]*state)
@@ -102,8 +102,32 @@ func NewNFAFromFA(other Automate) (*nfa, error) {
 	return res, nil
 }
 
+func mapStates(start *state, used *map[*state]int, ans *[]*State, counter *int) error {
+	(*counter)++
+	(*used)[start] = *counter
+	newState := &State{Number: *counter, Transitions: make(map[rune][]int)}
+
+	for key, val := range start.next {
+		newState.Transitions[key] = make([]int, 0)
+		for _, v := range val {
+			_, ok := (*used)[v]
+			if !ok {
+				e := mapStates(v, used, ans, counter)
+				if e != nil {
+					return e
+				}
+			}
+			newState.Transitions[key] = append(newState.Transitions[key], (*used)[v])
+		}
+	}
+
+	(*ans) = append((*ans), newState)
+	return nil
+}
+
 func ConstructState(transitions *map[int]map[rune]int, sets *[]*map[*state]bool, created *map[int]*state, index int) *state {
 	res := &state{next: make(map[rune][]*state)}
+	(*created)[index] = res
 	for key := range *((*sets)[index]) {
 		if key.isTerm {
 			res.isTerm = true
@@ -130,26 +154,42 @@ type nfa struct {
 	terminals  []*state
 }
 
-func getAlphabet(st *state, alphabet *map[rune]bool) {
-	for key, val := range st.next {
-		fmt.Println("key:", string(key))
+func getAlphabet(st *state, alphabet *map[rune]bool, used *map[*state]bool) {
+	(*used)[st] = true
+	for key, value := range st.next {
 		if key != emptyWord {
 			(*alphabet)[key] = true
-			for _, st := range val {
-				getAlphabet(st, alphabet)
+		}
+		for _, s := range value {
+			_, ok := (*used)[s]
+			if !ok {
+				getAlphabet(s, alphabet, used)
 			}
 		}
 	}
 }
 
-func deleteEps(st *state, parent *state, letter rune, used *map[*state]bool) error {
-	(*used)[st] = true
-	for key, val := range st.next {
+func deleteEps(st *state, parent *state, letter rune, used *map[*state]int) error {
+	_, ok := (*used)[st]
+	switch ok {
+	case false:
+		(*used)[st] = 1
+	case true:
+		(*used)[st]++
+	}
 
+	for key, val := range st.next {
 		for _, s := range val {
-			_, ok := (*used)[s]
-			if ok {
+			v, ok := (*used)[s]
+			if ok && v == 2 {
 				continue
+			}
+			if ok && key == emptyWord {
+				for l, to := range s.next {
+					if l != emptyWord {
+						st.next[l] = append(st.next[l], to...)
+					}
+				}
 			}
 			deleteEps(s, st, key, used)
 		}
@@ -169,9 +209,8 @@ func deleteEps(st *state, parent *state, letter rune, used *map[*state]bool) err
 }
 
 func (a *nfa) DeleteEps() error {
-	used := make(map[*state]bool)
+	used := make(map[*state]int)
 	err := deleteEps(a.startState, nil, emptyWord, &used)
-	fmt.Println("haahahahahahahahahah", a.startState.next['f'][0].next)
 	return err
 }
 
@@ -179,56 +218,73 @@ func (a *nfa) Check() bool {
 	return false
 }
 
-func (a *nfa) Read(word string) error {
-	type stateAndIndex struct {
-		state      *state
-		stateIndex int
-		indexEmpty int
-		wordIndex  int
+func (a *nfa) GetStates() ([]*State, error) {
+	used := make(map[*state]int)
+	ans := make([]*State, 0)
+
+	var counter int
+	err := mapStates(a.startState, &used, &ans, &counter)
+	return ans, err
+}
+
+func checkTerminal(start *state, used *map[*state]bool) *state {
+	if start.isTerm {
+		return start
 	}
 
-	stackStates := make([]*stateAndIndex, 1)
-	stackStates[0] = &stateAndIndex{state: a.startState}
-	var cur *stateAndIndex
+	(*used)[start] = true
+	for key, val := range start.next {
+		if key == emptyWord {
+			for _, st := range val {
+				_, ok := (*used)[st]
+				if !ok {
+					return checkTerminal(st, used)
+				}
+			}
+		}
+	}
+	return nil
+}
 
-	for len(stackStates) > 0 {
-		cur = stackStates[len(stackStates)-1]
-
-		fmt.Println("word", word, cur.wordIndex)
-		if cur.wordIndex == len(word) && cur.state.isTerm {
+func readWord(start *state, word string, index int, used *map[*state]int) error {
+	if index == len(word) {
+		m := make(map[*state]bool)
+		res := checkTerminal(start, &m)
+		if res != nil {
 			return nil
+		} else {
+			return customerrors.ErrNoSuchWord
 		}
+	}
 
-		_, empty := cur.state.next[emptyWord]
-		if empty && cur.indexEmpty < len(cur.state.next[emptyWord]) {
-			stackStates = append(
-				stackStates,
-				&stateAndIndex{state: cur.state.next[emptyWord][cur.indexEmpty], wordIndex: cur.wordIndex},
-			)
-			cur.indexEmpty++
-			continue
+	(*used)[start] = index
+	for key, val := range start.next {
+		switch key {
+		case rune(word[index]):
+			for _, st := range val {
+				e := readWord(st, word, index+1, used)
+				if e == nil {
+					return nil
+				}
+			}
+		case emptyWord:
+			for _, st := range val {
+				v, ok := (*used)[st]
+				if !ok || v != index {
+					e := readWord(st, word, index, used)
+					if e == nil {
+						return nil
+					}
+				}
+			}
 		}
-
-		var ok bool
-		if len(word) > cur.wordIndex {
-			_, ok = cur.state.next[rune(word[cur.wordIndex])]
-		}
-
-		if len(word) == cur.wordIndex || !ok || cur.stateIndex == len(cur.state.next[rune(word[cur.wordIndex])]) {
-			stackStates = stackStates[:len(stackStates)-1]
-			continue
-		}
-		stackStates = append(
-			stackStates,
-			&stateAndIndex{
-				state:     cur.state.next[rune(word[cur.wordIndex])][cur.stateIndex],
-				wordIndex: cur.wordIndex + 1,
-			},
-		)
-
-		cur.stateIndex++
 	}
 	return customerrors.ErrNoSuchWord
+}
+
+func (a *nfa) Read(word string) error {
+	used := make(map[*state]int)
+	return readWord(a.startState, word, 0, &used)
 }
 
 func (a *nfa) putStartState(automate Automate) error {
@@ -264,14 +320,35 @@ func (a *nfa) AddNewWord(word string) error {
 }
 
 func (a *nfa) Cycle() error {
+	newStartState := &state{next: make(map[rune][]*state)}
 	a.startState.isTerm = true
 
+	newStartState.next[emptyWord] = []*state{a.startState}
+
 	for _, term := range a.terminals {
-		term.next[emptyWord] = append(term.next[emptyWord], a.startState)
+		term.next[emptyWord] = append(term.next[emptyWord], newStartState)
 	}
+
 	a.terminals = append(a.terminals, a.startState)
+	a.startState = newStartState
 
 	return nil
+}
+
+func addEdgesToState(start *state, to *state, used *map[*state]bool) {
+	(*used)[start] = true
+	for key, val := range start.next {
+		for i, st := range val {
+			if st.isTerm {
+				start.next[key][i].isTerm = false
+				start.next[key] = append(start.next[key], to)
+			}
+			_, ok := (*used)[st]
+			if !ok {
+				addEdgesToState(st, to, used)
+			}
+		}
+	}
 }
 
 func (a *nfa) Concat(other Automate) error {
@@ -284,10 +361,8 @@ func (a *nfa) Concat(other Automate) error {
 		return a.putStartState(other)
 	}
 
-	for _, term := range a.terminals {
-		term.isTerm = false
-		term.next[emptyWord] = append(term.next[emptyWord], realAutomate.startState)
-	}
+	used := make(map[*state]bool)
+	addEdgesToState(a.startState, realAutomate.startState, &used)
 
 	a.terminals = realAutomate.terminals
 	return nil
@@ -317,7 +392,8 @@ func (a *fa) DeleteEps() error {
 }
 
 func (a *fa) Read(line string) error {
-	return nil
+	used := make(map[*state]int)
+	return readWord(a.startState, line, 0, &used)
 }
 
 func (a *fa) Check() bool {
@@ -342,6 +418,15 @@ func (a *fa) Cycle() error {
 
 func (a *fa) putStartState(automate Automate) error {
 	return customerrors.ErrNotImplemented
+}
+
+func (a *fa) GetStates() ([]*State, error) {
+	used := make(map[*state]int)
+	ans := make([]*State, 0)
+
+	var counter int
+	err := mapStates(a.startState, &used, &ans, &counter)
+	return ans, err
 }
 
 type state struct {

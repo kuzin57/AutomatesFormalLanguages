@@ -168,3 +168,7 @@ func (a *nfaAutomateAdapter) GetName() string {
 func (a *nfaAutomateAdapter) DeleteEps() error {
 	return a.automate.DeleteEps()
 }
+
+func (a *nfaAutomateAdapter) GetStates() ([]*automate.State, error) {
+	return a.automate.GetStates()
+}

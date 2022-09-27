@@ -13,4 +13,5 @@ type AutomateAdapter interface {
 	GetName() string
 	SetName(string)
 	DeleteEps() error
+	GetStates() ([]*automate.State, error)
 }
