@@ -4,7 +4,6 @@ import (
 	"workspace/adapters"
 	automatesadapters "workspace/adapters/automates_adapters"
 	"workspace/internal/actions"
-	"workspace/internal/config"
 )
 
 type MakeNFAParams struct {
@@ -28,10 +27,10 @@ func NewMakeNFAAction(params *MakeNFAParams, adapter adapters.AutomateAdapter) (
 }
 
 func (a *MakeNFAAction) Do() {
-	automateAdapter := automatesadapters.NewAutomateAdapter(config.MakeAdaptersConfig(false))
+	automateAdapter := automatesadapters.NewAutomateAdapter(a.params.Name)
 	automateAdapter.SetName(a.params.Name)
 
-	newAutomateAdapter := automatesadapters.NewAutomateAdapter(config.MakeAdaptersConfig(false))
+	newAutomateAdapter := automatesadapters.NewAutomateAdapter(a.params.Name)
 
 	newAutomateAdapter.Create(a.params.Name, a.params.Expr)
 	if a.Error = automateAdapter.Join(newAutomateAdapter); a.CheckErr() {

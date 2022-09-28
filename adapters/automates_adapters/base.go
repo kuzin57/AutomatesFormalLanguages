@@ -1,14 +1,10 @@
-package automatesadapters
+package automateadapter
 
 import (
 	"workspace/adapters"
-	"workspace/internal/automate"
-	"workspace/internal/config"
+	"workspace/internal/entities/automate"
 )
 
-func NewAutomateAdapter(cfg config.AdaptersConfig) adapters.AutomateAdapter {
-	if cfg.IsDeterministic {
-		return &faAutomateAdapter{automate: automate.NewFA()}
-	}
-	return &nfaAutomateAdapter{automate: automate.NewNFA()}
+func NewAutomateAdapter(name string) adapters.AutomateAdapter {
+	return &automateAdapter{automate: automate.NewAutomate()}
 }

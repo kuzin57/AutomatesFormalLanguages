@@ -2,7 +2,6 @@ package shell
 
 import (
 	"fmt"
-	"strings"
 
 	showactions "workspace/internal/actions/show_actions"
 
@@ -66,8 +65,7 @@ type useShowHandler struct {
 }
 
 func (h *useShowHandler) RunE(cmd *cobra.Command, args []string) (err error) {
-	buf := &strings.Builder{}
-	params := &showactions.ShowStatesParams{Buffer: buf}
+	params := &showactions.ShowStatesParams{}
 
 	for _, adapter := range h.shell.Automates {
 		if adapter.GetName() == h.name {
@@ -85,8 +83,6 @@ func (h *useShowHandler) RunE(cmd *cobra.Command, args []string) (err error) {
 	if err = action.Error; err != nil {
 		return err
 	}
-
-	h.shell.printTable(buf.String())
 
 	return nil
 }

@@ -30,7 +30,7 @@ func makeModifyDetCommand(shell *Shell) {
 	handler := &modifyDetHandler{shell: shell}
 	cmd := &cobra.Command{
 		Use:   "det",
-		Short: "determinize automate",
+		Short: "Determine automate",
 		RunE:  handler.RunE,
 	}
 
@@ -74,13 +74,13 @@ type modifyDetHandler struct {
 }
 
 func (h *modifyDetHandler) RunE(cmd *cobra.Command, args []string) error {
-	params := modifyactions.DeterminizeParams{}
+	params := modifyactions.DetermineParams{}
 	for _, adapter := range h.shell.Automates {
 		if adapter.GetName() == h.nfaName {
 			params.NFA = adapter
 			params.Name = h.name
 
-			action, err := modifyactions.NewDeterminizeAction(&params)
+			action, err := modifyactions.NewDetermineAction(&params)
 			if err != nil {
 				return err
 			}
@@ -93,6 +93,6 @@ func (h *modifyDetHandler) RunE(cmd *cobra.Command, args []string) error {
 			h.shell.Automates = append(h.shell.Automates, action.Result().FA)
 		}
 	}
-
+	fmt.Println("success!")
 	return nil
 }
