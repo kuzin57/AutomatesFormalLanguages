@@ -31,8 +31,8 @@ type createAutomateHandler struct {
 }
 
 func (h *createAutomateHandler) RunE(cmd *cobra.Command, args []string) error {
-	params := &makeactions.MakeNFAParams{Expr: h.regularExpr, Name: h.name}
-	action, err := makeactions.NewMakeNFAAction(params, nil)
+	params := &makeactions.MakeAutomateParams{Expr: h.regularExpr, Name: h.name}
+	action, err := makeactions.NewMakeAutomateAction(params, nil)
 	if err != nil {
 		return err
 	}
@@ -42,8 +42,9 @@ func (h *createAutomateHandler) RunE(cmd *cobra.Command, args []string) error {
 		return action.Error
 	}
 
-	fmt.Println("name: ", action.Result().Adapter.GetName())
 	h.shell.Automates = append(h.shell.Automates, action.Result().Adapter)
+
+	fmt.Println("success!")
 
 	return nil
 }

@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strings"
 	"workspace/adapters"
+	"workspace/internal/entities/parser"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/peterh/liner"
@@ -17,6 +18,7 @@ import (
 type Shell struct {
 	router    *commandRouter
 	Automates []adapters.AutomateAdapter
+	Parser    parser.Parser
 	prompt    string
 }
 
