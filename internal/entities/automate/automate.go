@@ -5,11 +5,11 @@ import (
 )
 
 func NewAutomate() *Automate {
-	return &Automate{startState: &state{isTerm: false, next: make(map[rune][]*state)}}
+	return &Automate{startState: &state{isTerm: false, next: make(map[string][]*state)}}
 }
 
-func getSetsTranisitions(a *Automate) (*[]*map[*state]bool, *map[int]map[rune]int, error) {
-	alphabet := make(map[rune]bool)
+func getSetsTranisitions(a *Automate) (*[]*map[*state]bool, *map[int]map[string]int, error) {
+	alphabet := make(map[string]bool)
 	used := make(map[*state]bool)
 
 	if err := traversal(a.startState, nil, nil, nil, &used, &getterAlphabet{alphabet: &alphabet}); err != nil {
@@ -17,7 +17,7 @@ func getSetsTranisitions(a *Automate) (*[]*map[*state]bool, *map[int]map[rune]in
 	}
 
 	sets := make([]*map[*state]bool, 1)
-	transitions := make(map[int]map[rune]int, 0)
+	transitions := make(map[int]map[string]int, 0)
 
 	firstSet := make(map[*state]bool)
 	firstSet[a.startState] = true
@@ -32,7 +32,7 @@ func getSetsTranisitions(a *Automate) (*[]*map[*state]bool, *map[int]map[rune]in
 			newSetAdded bool
 		)
 
-		transitions[setsIndex] = make(map[rune]int)
+		transitions[setsIndex] = make(map[string]int)
 		newSets := make([]*map[*state]bool, len(alphabet))
 		for letter := range alphabet {
 			newSets[index] = &map[*state]bool{}
@@ -59,7 +59,7 @@ func getSetsTranisitions(a *Automate) (*[]*map[*state]bool, *map[int]map[rune]in
 
 			if needAdd {
 				sets = append(sets, newSets[index])
-				transitions[len(sets)-1] = map[rune]int{}
+				transitions[len(sets)-1] = map[string]int{}
 				transitions[setsIndex][letter] = len(sets) - 1
 				newSetAdded = true
 			} else {
@@ -91,12 +91,12 @@ func (a *Automate) Determine() (*Automate, error) {
 }
 
 func (a *Automate) ConstructState(
-	transitions *map[int]map[rune]int,
+	transitions *map[int]map[string]int,
 	sets *[]*map[*state]bool,
 	created *map[int]*state,
 	index int,
 ) *state {
-	res := &state{next: make(map[rune][]*state)}
+	res := &state{next: make(map[string][]*state)}
 	(*created)[index] = res
 
 	for key := range *((*sets)[index]) {
@@ -141,14 +141,27 @@ func (a *Automate) DeleteEps() error {
 	return nil
 }
 
-func (a *Automate) GetStates() ([]*State, error) {
-	used := make(map[*state]int)
-	ans := make([]*State, 0)
+func (a *Automate) GetStates() (ans []*State, err error) {
+	var (
+		states = make([]*state, 0)
+		used   = make(map[*state]bool)
+	)
 
-	var counter int
-	err := mapStates(a.startState, &used, &ans, &counter)
+	if err := traversal(a.startState, nil, &states, nil, &used, &getterStates{}); err != nil {
+		return nil, err
+	}
 
-	return ans, err
+	left := 0
+	right := len(states) - 1
+	for left < right {
+		states[left], states[right] = states[right], states[left]
+		left++
+		right--
+	}
+
+	ans, err = mapStates(states)
+
+	return
 }
 
 func (a *Automate) Read(word string) error {
@@ -165,16 +178,17 @@ func (a *Automate) putStartState(auto *Automate) error {
 func (a *Automate) AddNewWord(word string) error {
 	curState := a.startState
 	for _, letter := range word {
-		_, ok := curState.next[letter]
+		strLetter := string(letter)
+		_, ok := curState.next[strLetter]
 		switch ok {
 		case true:
-			curState = curState.next[letter][0]
+			curState = curState.next[strLetter][0]
 		case false:
-			curState.next[letter] = append(
-				curState.next[letter],
-				&state{isTerm: false, next: make(map[rune][]*state)},
+			curState.next[strLetter] = append(
+				curState.next[strLetter],
+				&state{isTerm: false, next: make(map[string][]*state)},
 			)
-			curState = curState.next[letter][0]
+			curState = curState.next[strLetter][0]
 		}
 	}
 
@@ -184,7 +198,7 @@ func (a *Automate) AddNewWord(word string) error {
 }
 
 func (a *Automate) Cycle() error {
-	newStartState := &state{next: make(map[rune][]*state)}
+	newStartState := &state{next: make(map[string][]*state)}
 	newStartState.next[emptyWord] = []*state{a.startState}
 	newStartState.isTerm = true
 
@@ -216,7 +230,7 @@ func (a *Automate) Join(other *Automate) error {
 		return a.putStartState(other)
 	}
 
-	newState := &state{next: make(map[rune][]*state)}
+	newState := &state{next: make(map[string][]*state)}
 	newState.next[emptyWord] = make([]*state, 2)
 	newState.next[emptyWord][0] = a.startState
 	newState.next[emptyWord][1] = other.startState
@@ -227,9 +241,9 @@ func (a *Automate) Join(other *Automate) error {
 }
 
 func (a *Automate) Full() error {
-	stock := &state{next: make(map[rune][]*state)}
+	stock := &state{next: make(map[string][]*state)}
 
-	alphabet := make(map[rune]bool)
+	alphabet := make(map[string]bool)
 	used := make(map[*state]bool)
 	if err := traversal(a.startState, nil, nil, nil, &used, &getterAlphabet{alphabet: &alphabet}); err != nil {
 		return err
@@ -260,7 +274,7 @@ func (a *Automate) Invert() error {
 func (a *Automate) Minimize() error {
 	prevClasses := make(map[*state]int)
 	curClasses := make(map[*state]int)
-	alphabet := make(map[rune]bool)
+	alphabet := make(map[string]bool)
 	used := make(map[*state]bool)
 
 	if err := traversal(a.startState, nil, nil, &prevClasses, &used, &getterTerminals{}); err != nil {
@@ -273,7 +287,7 @@ func (a *Automate) Minimize() error {
 		return err
 	}
 
-	alphabetArray := make([]rune, 0)
+	alphabetArray := make([]string, 0)
 	for letter := range alphabet {
 		alphabetArray = append(alphabetArray, letter)
 	}
@@ -287,6 +301,7 @@ func (a *Automate) Minimize() error {
 	var counter int
 	for {
 		counter = 0
+
 		for i, st := range states {
 			index := -1
 			for j := 0; j < i; j++ {
@@ -323,32 +338,200 @@ func (a *Automate) Minimize() error {
 			break
 		}
 
-		prevClasses = curClasses
+		prevClasses = make(map[*state]int)
+		for k, v := range curClasses {
+			prevClasses[k] = v
+		}
 	}
 
 	newStates := make([]*state, counter)
 	for i := 0; i < counter; i++ {
-		newStates[i] = &state{next: make(map[rune][]*state)}
+		newStates[i] = &state{next: make(map[string][]*state)}
 	}
 
+	terminals := make(map[*state]bool)
 	for key, val := range curClasses {
 		if key.isTerm {
 			newStates[val].isTerm = true
+
+			_, ok := terminals[newStates[val]]
+			if !ok {
+				terminals[newStates[val]] = true
+			}
 		}
 
 		for k, v := range key.next {
 			for _, st := range v {
-				newStates[val].next[k] = append(newStates[val].next[k], newStates[curClasses[st]])
+				addNewTransition(newStates[val], newStates[curClasses[st]], k)
 			}
 		}
 	}
 
 	a.startState = newStates[curClasses[a.startState]]
 
+	a.terminals = make([]*state, 0)
+	for k := range terminals {
+		a.terminals = append(a.terminals, k)
+	}
+
 	return nil
 }
 
+func addExpr(to string, first string, second string) string {
+	switch {
+	case first == "", len(first) == 1:
+		to += first
+	default:
+		to += "("
+		to += first
+		to += ")"
+		to += second
+	}
+
+	return to
+}
+
+func (a *Automate) GetRegularExpr() (string, error) {
+	newTerm := &state{isTerm: true}
+
+	for _, term := range a.terminals {
+		term.isTerm = false
+		term.next[""] = append(term.next[""], newTerm)
+	}
+
+	used := make(map[*state]bool)
+	states := make([]*state, 0)
+	err := traversal(a.startState, nil, &states, nil, &used, &getterStates{})
+	if err != nil {
+		return "", err
+	}
+
+	for {
+		var (
+			exit  = true
+			st    *state
+			index int
+		)
+
+		for i, s := range states {
+			if !s.isTerm && a.startState != s {
+				st = s
+				exit = false
+				index = i
+				break
+			}
+		}
+
+		for _, s := range states {
+			err := removeDublicates(s)
+			if err != nil {
+				return "", err
+			}
+		}
+
+		if exit || len(states) == 2 {
+			break
+		}
+
+		expr, err := proccessSelfTransitions(st)
+		if err != nil {
+			return "", err
+		}
+
+		for _, stat := range states {
+			err := removeDublicates(stat)
+			if err != nil {
+				return "", err
+			}
+
+			toAdd := make(map[string][]*state)
+			for key, val := range stat.next {
+				toDelete := -1
+				for _, v := range val {
+					if v == st {
+						for k, node := range v.next {
+							for _, n := range node {
+								var ex string
+								ex = addExpr(ex, key, "")
+								ex = addExpr(ex, expr, "*")
+								ex = addExpr(ex, k, "")
+
+								_, ok := toAdd[ex]
+								switch ok {
+								case true:
+									toAdd[ex] = append(toAdd[ex], n)
+								case false:
+									toAdd[ex] = []*state{n}
+								}
+							}
+						}
+					}
+				}
+
+				for j, n := range stat.next[key] {
+					if n == st {
+						toDelete = j
+					}
+				}
+
+				if toDelete != -1 {
+					if len(stat.next[key]) == 1 {
+						stat.next[key] = nil
+					} else {
+						stat.next[key] = append(stat.next[key][:toDelete], stat.next[key][(toDelete+1):]...)
+					}
+
+					if len(stat.next[key]) == 0 {
+						delete(stat.next, key)
+					}
+				}
+			}
+
+			for exp, node := range toAdd {
+				for _, nn := range node {
+					_, ok := stat.next[exp]
+					if !ok {
+						stat.next[exp] = []*state{nn}
+					}
+				}
+			}
+		}
+
+		states = append(states[:index], states[(index+1):]...)
+	}
+
+	expr, err := proccessSelfTransitions(a.startState)
+	if err != nil {
+		return "", err
+	}
+
+	_, ok := a.startState.next[expr]
+	if !ok {
+		a.startState.next[expr] = []*state{a.startState}
+	} else {
+		a.startState.next[expr] = append(a.startState.next[expr], a.startState)
+	}
+
+	err = removeDublicates(a.startState)
+	if err != nil {
+		return "", err
+	}
+
+	var ans string
+	for key, val := range a.startState.next {
+		for _, v := range val {
+			if v == a.startState && key != "" {
+				ans += "(" + key + ")" + "*"
+			} else {
+				ans += key
+			}
+		}
+	}
+
+	return ans, nil
+}
+
 type state struct {
-	next   map[rune][]*state
+	next   map[string][]*state
 	isTerm bool
 }

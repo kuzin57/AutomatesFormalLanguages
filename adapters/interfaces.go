@@ -19,4 +19,5 @@ type AutomateAdapter interface {
 	MakeFull() error
 	Invert() error
 	Minimize() error
+	GetRegularExpr() (string, error)
 }

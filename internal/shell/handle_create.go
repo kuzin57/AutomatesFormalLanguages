@@ -9,6 +9,7 @@ import (
 
 func registerCreateSubcommands(shell *Shell) {
 	makeCreateAutomateCommand(shell)
+	makeCreateRegExCommand(shell)
 }
 
 func makeCreateAutomateCommand(shell *Shell) {
@@ -21,6 +22,18 @@ func makeCreateAutomateCommand(shell *Shell) {
 	createCmd.AddCommand(cmd)
 
 	cmd.Flags().StringVarP(&handler.regularExpr, "regular", "r", "", "regular expression")
+	cmd.Flags().StringVarP(&handler.name, "name", "n", "", "name of automate")
+}
+
+func makeCreateRegExCommand(shell *Shell) {
+	handler := &createRegExHandler{shell: shell}
+	cmd := &cobra.Command{
+		Use:   "regex",
+		Short: "make regular expression",
+		RunE:  handler.RunE,
+	}
+	createCmd.AddCommand(cmd)
+
 	cmd.Flags().StringVarP(&handler.name, "name", "n", "", "name of automate")
 }
 
@@ -46,5 +59,24 @@ func (h *createAutomateHandler) RunE(cmd *cobra.Command, args []string) error {
 
 	fmt.Println("success!")
 
+	return nil
+}
+
+type createRegExHandler struct {
+	shell *Shell
+	name  string
+}
+
+func (h *createRegExHandler) RunE(cmd *cobra.Command, args []string) (err error) {
+	var expr string
+	for _, adapter := range h.shell.Automates {
+		if adapter.GetName() == h.name {
+			expr, err = adapter.GetRegularExpr()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	fmt.Println(expr)
 	return nil
 }

@@ -42,7 +42,7 @@ func (d *deleterEps) Execute(args ...any) error {
 }
 
 type fuller struct {
-	alphabet *map[rune]bool
+	alphabet *map[string]bool
 }
 
 func (f *fuller) Execute(args ...any) error {
@@ -66,7 +66,7 @@ func (f *fuller) Execute(args ...any) error {
 }
 
 type getterAlphabet struct {
-	alphabet *map[rune]bool
+	alphabet *map[string]bool
 }
 
 func (g *getterAlphabet) Execute(args ...any) error {

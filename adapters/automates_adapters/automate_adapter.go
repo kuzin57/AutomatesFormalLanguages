@@ -92,3 +92,7 @@ func (a *automateAdapter) Invert() error {
 func (a *automateAdapter) Minimize() error {
 	return a.automate.Minimize()
 }
+
+func (a *automateAdapter) GetRegularExpr() (string, error) {
+	return a.automate.GetRegularExpr()
+}

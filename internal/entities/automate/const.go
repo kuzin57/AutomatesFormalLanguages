@@ -1,5 +1,5 @@
 package automate
 
 const (
-	emptyWord = '#'
+	emptyWord = "#"
 )
