@@ -1,7 +1,6 @@
 package automate
 
 import (
-	"fmt"
 	"reflect"
 )
 
@@ -259,24 +258,6 @@ func (a *Automate) Invert() error {
 }
 
 func (a *Automate) Minimize() error {
-	type tuple struct {
-		prevClass        int
-		neighbourClasses []int
-	}
-
-	// cmpTuples := func(first *tuple, second *tuple) bool {
-	// 	if first.prevClass != second.prevClass || len(first.neighbourClasses) != len(second.neighbourClasses) {
-	// 		return false
-	// 	}
-
-	// 	for i := 0; i < len(first.neighbourClasses); i++ {
-	// 		if first.neighbourClasses[i] != second.neighbourClasses[i] {
-	// 			return false
-	// 		}
-	// 	}
-	// 	return true
-	// }
-
 	prevClasses := make(map[*state]int)
 	curClasses := make(map[*state]int)
 	alphabet := make(map[rune]bool)
@@ -304,35 +285,7 @@ func (a *Automate) Minimize() error {
 	}
 
 	var counter int
-
 	for {
-		// tuples := make([]tuple, len(states))
-		// for i, st := range states {
-		// 	tuples[i] = tuple{prevClass: prevClasses[st], neighbourClasses: make([]int, len(alphabetArray))}
-		// 	for j, letter := range alphabetArray {
-		// 		tuples[i].neighbourClasses[j] = prevClasses[st.next[letter][0]]
-		// 	}
-		// }
-
-		// counter = 0
-		// for i, tuple := range tuples {
-		// 	index := -1
-		// 	for j := 0; j < i; j++ {
-		// 		if cmpTuples(&tuple, &tuples[j]) {
-		// 			index = j
-		// 			break
-		// 		}
-		// 	}
-
-		// 	switch index {
-		// 	case -1:
-		// 		curClasses[states[i]] = counter
-		// 		counter++
-		// 	default:
-		// 		curClasses[states[i]] = index
-		// 	}
-		// }
-
 		counter = 0
 		for i, st := range states {
 			index := -1
@@ -343,7 +296,6 @@ func (a *Automate) Minimize() error {
 				index = j
 				for _, letter := range alphabetArray {
 					if prevClasses[states[j].next[letter][0]] != prevClasses[st.next[letter][0]] {
-						fmt.Println("j", j, "i", i, "letter", letter)
 						index = -1
 					}
 				}
