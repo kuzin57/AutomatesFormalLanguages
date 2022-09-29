@@ -13,6 +13,7 @@ func registerModifySubcommands(shell *Shell) {
 	makeModifyDetCommand(shell)
 	makeModifyFullCommand(shell)
 	makeModifyInvertCommand(shell)
+	makeMinimizeCommand(shell)
 }
 
 func makeModifyEpsCommand(shell *Shell) {
@@ -57,6 +58,18 @@ func makeModifyInvertCommand(shell *Shell) {
 	cmd := &cobra.Command{
 		Use:   "invert",
 		Short: "invert automate",
+		RunE:  handler.RunE,
+	}
+	modifyCmd.AddCommand(cmd)
+
+	cmd.Flags().StringVarP(&handler.name, "name", "n", "", "name of automate")
+}
+
+func makeMinimizeCommand(shell *Shell) {
+	handler := &modifyMinHandler{shell: shell}
+	cmd := &cobra.Command{
+		Use:   "min",
+		Short: "minimize automate",
 		RunE:  handler.RunE,
 	}
 	modifyCmd.AddCommand(cmd)
@@ -152,6 +165,31 @@ func (h *modifyInvertHandler) RunE(cmd *cobra.Command, args []string) error {
 		if adapter.GetName() == h.name {
 			params.Adapter = adapter
 			action, err := modifyactions.NewInvertAction(&params)
+			if err != nil {
+				return err
+			}
+
+			action.Do()
+			if err = action.Error; err != nil {
+				return err
+			}
+		}
+	}
+	fmt.Println("success!")
+	return nil
+}
+
+type modifyMinHandler struct {
+	shell *Shell
+	name  string
+}
+
+func (h *modifyMinHandler) RunE(cmd *cobra.Command, args []string) error {
+	params := modifyactions.MinimizeParams{}
+	for _, adapter := range h.shell.Automates {
+		if adapter.GetName() == h.name {
+			params.Adapter = adapter
+			action, err := modifyactions.NewMinimizeAction(&params)
 			if err != nil {
 				return err
 			}

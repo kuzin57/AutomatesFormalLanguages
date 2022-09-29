@@ -1,18 +1,21 @@
 package automate
 
 import (
+	"fmt"
 	"reflect"
-	customerrors "workspace/internal/errors"
 )
 
 func NewAutomate() *Automate {
 	return &Automate{startState: &state{isTerm: false, next: make(map[rune][]*state)}}
 }
 
-func DetermineAutomate(a *Automate) (*Automate, error) {
+func getSetsTranisitions(a *Automate) (*[]*map[*state]bool, *map[int]map[rune]int, error) {
 	alphabet := make(map[rune]bool)
 	used := make(map[*state]bool)
-	getAlphabet(a.startState, &alphabet, &used)
+
+	if err := traversal(a.startState, nil, nil, nil, &used, &getterAlphabet{alphabet: &alphabet}); err != nil {
+		return nil, nil, err
+	}
 
 	sets := make([]*map[*state]bool, 1)
 	transitions := make(map[int]map[rune]int, 0)
@@ -63,7 +66,6 @@ func DetermineAutomate(a *Automate) (*Automate, error) {
 			} else {
 				transitions[setsIndex][letter] = indexEqual
 			}
-
 			index++
 		}
 
@@ -73,34 +75,20 @@ func DetermineAutomate(a *Automate) (*Automate, error) {
 		}
 	}
 
-	created := make(map[int]*state)
-	res := &Automate{}
-	res.startState = res.ConstructState(&transitions, &sets, &created, 0)
-
-	return res, nil
+	return &sets, &transitions, nil
 }
 
-func mapStates(start *state, used *map[*state]int, ans *[]*State, counter *int) error {
-	(*counter)++
-	(*used)[start] = *counter
-
-	newState := &State{Number: *counter, Transitions: make(map[rune][]int), IsTerminal: start.isTerm}
-	(*ans) = append((*ans), newState)
-
-	for key, val := range start.next {
-		newState.Transitions[key] = make([]int, 0)
-		for _, v := range val {
-			_, ok := (*used)[v]
-			if !ok {
-				e := mapStates(v, used, ans, counter)
-				if e != nil {
-					return e
-				}
-			}
-			newState.Transitions[key] = append(newState.Transitions[key], (*used)[v])
-		}
+func (a *Automate) Determine() (*Automate, error) {
+	sets, transitions, err := getSetsTranisitions(a)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+
+	created := make(map[int]*state)
+	res := &Automate{}
+	res.startState = res.ConstructState(transitions, sets, &created, 0)
+
+	return res, nil
 }
 
 func (a *Automate) ConstructState(
@@ -139,90 +127,6 @@ type Automate struct {
 	terminals  []*state
 }
 
-func getAlphabet(st *state, alphabet *map[rune]bool, used *map[*state]bool) {
-	(*used)[st] = true
-	for key, value := range st.next {
-		if key != emptyWord {
-			(*alphabet)[key] = true
-		}
-		for _, s := range value {
-			_, ok := (*used)[s]
-			if !ok {
-				getAlphabet(s, alphabet, used)
-			}
-		}
-	}
-}
-
-func deleteEps(st *state, cur *state, used *map[*state]bool) (err error) {
-	(*used)[cur] = true
-
-	for key, val := range cur.next {
-		switch {
-		case key == emptyWord:
-			for _, v := range val {
-				_, ok := (*used)[v]
-				if !ok {
-					err = deleteEps(st, v, used)
-					if err != nil {
-						return
-					}
-				}
-			}
-
-		default:
-			if st != cur {
-				st.next[key] = append(st.next[key], val...)
-			}
-		}
-	}
-
-	return
-}
-
-func iterateStatesDeleteEps(st *state, used *map[*state]bool) (err error) {
-	(*used)[st] = true
-
-	visited := make(map[*state]bool)
-	err = deleteEps(st, st, &visited)
-	if err != nil {
-		return err
-	}
-
-	for _, val := range st.next {
-		for _, v := range val {
-			_, ok := (*used)[v]
-			if !ok {
-				err = iterateStatesDeleteEps(v, used)
-				if err != nil {
-					return
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
-func delEps(st *state, used *map[*state]bool) error {
-	(*used)[st] = true
-	for _, val := range st.next {
-		for _, v := range val {
-			_, ok := (*used)[v]
-			if !ok {
-				err := delEps(v, used)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	delete(st.next, emptyWord)
-
-	return nil
-}
-
 func (a *Automate) DeleteEps() error {
 	used := make(map[*state]bool)
 
@@ -231,7 +135,7 @@ func (a *Automate) DeleteEps() error {
 	}
 
 	used = make(map[*state]bool)
-	if err := delEps(a.startState, &used); err != nil {
+	if err := traversal(a.startState, nil, nil, nil, &used, &deleterEps{}); err != nil {
 		return err
 	}
 
@@ -246,61 +150,6 @@ func (a *Automate) GetStates() ([]*State, error) {
 	err := mapStates(a.startState, &used, &ans, &counter)
 
 	return ans, err
-}
-
-func checkTerminal(start *state, used *map[*state]bool) *state {
-	if start.isTerm {
-		return start
-	}
-
-	(*used)[start] = true
-	for key, val := range start.next {
-		if key == emptyWord {
-			for _, st := range val {
-				_, ok := (*used)[st]
-				if !ok {
-					return checkTerminal(st, used)
-				}
-			}
-		}
-	}
-	return nil
-}
-
-func readWord(start *state, word string, index int, used *map[*state]int) error {
-	if index == len(word) {
-		m := make(map[*state]bool)
-		res := checkTerminal(start, &m)
-		if res != nil {
-			return nil
-		} else {
-			return customerrors.ErrNoSuchWord
-		}
-	}
-
-	(*used)[start] = index
-	for key, val := range start.next {
-		switch key {
-		case rune(word[index]):
-			for _, st := range val {
-				e := readWord(st, word, index+1, used)
-				if e == nil {
-					return nil
-				}
-			}
-		case emptyWord:
-			for _, st := range val {
-				v, ok := (*used)[st]
-				if !ok || v != index {
-					e := readWord(st, word, index, used)
-					if e == nil {
-						return nil
-					}
-				}
-			}
-		}
-	}
-	return customerrors.ErrNoSuchWord
 }
 
 func (a *Automate) Read(word string) error {
@@ -378,36 +227,14 @@ func (a *Automate) Join(other *Automate) error {
 	return nil
 }
 
-func full(st *state, stock *state, used *map[*state]bool, alphabet *map[rune]bool) error {
-	(*used)[st] = true
-
-	for _, val := range st.next {
-		for _, v := range val {
-			_, ok := (*used)[v]
-			if !ok {
-				err := full(v, stock, used, alphabet)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	for key := range *alphabet {
-		_, ok := st.next[key]
-		if !ok {
-			st.next[key] = []*state{stock}
-		}
-	}
-	return nil
-}
-
 func (a *Automate) Full() error {
 	stock := &state{next: make(map[rune][]*state)}
 
 	alphabet := make(map[rune]bool)
 	used := make(map[*state]bool)
-	getAlphabet(a.startState, &alphabet, &used)
+	if err := traversal(a.startState, nil, nil, nil, &used, &getterAlphabet{alphabet: &alphabet}); err != nil {
+		return err
+	}
 
 	for letter := range alphabet {
 		stock.next[letter] = []*state{stock}
@@ -415,44 +242,133 @@ func (a *Automate) Full() error {
 
 	used = make(map[*state]bool)
 
-	return full(a.startState, stock, &used, &alphabet)
-}
-
-func invert(st *state, used *map[*state]bool, terminals *[]*state) error {
-	(*used)[st] = true
-	switch st.isTerm {
-	case true:
-		st.isTerm = false
-	case false:
-		st.isTerm = true
-		(*terminals) = append((*terminals), st)
-	}
-
-	for _, val := range st.next {
-		for _, v := range val {
-			_, ok := (*used)[v]
-			if !ok {
-				err := invert(v, used, terminals)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	return nil
+	return traversal(a.startState, stock, nil, nil, &used, &fuller{alphabet: &alphabet})
 }
 
 func (a *Automate) Invert() error {
 	newTerminals := make([]*state, 0)
 	used := make(map[*state]bool)
 
-	err := invert(a.startState, &used, &newTerminals)
+	err := traversal(a.startState, nil, &newTerminals, nil, &used, &inverter{})
 	if err != nil {
 		return err
 	}
 
 	a.terminals = newTerminals
+	return nil
+}
+
+func (a *Automate) Minimize() error {
+	type tuple struct {
+		prevClass        int
+		neighbourClasses []int
+	}
+
+	cmpTuples := func(first *tuple, second *tuple) bool {
+		if first.prevClass != second.prevClass || len(first.neighbourClasses) != len(second.neighbourClasses) {
+			return false
+		}
+
+		for i := 0; i < len(first.neighbourClasses); i++ {
+			if first.neighbourClasses[i] != second.neighbourClasses[i] {
+				return false
+			}
+		}
+		return true
+	}
+
+	prevClasses := make(map[*state]int)
+	curClasses := make(map[*state]int)
+	alphabet := make(map[rune]bool)
+	used := make(map[*state]bool)
+
+	if err := traversal(a.startState, nil, nil, &prevClasses, &used, &getterTerminals{}); err != nil {
+		return err
+	}
+
+	used = make(map[*state]bool)
+
+	if err := traversal(a.startState, nil, nil, nil, &used, &getterAlphabet{alphabet: &alphabet}); err != nil {
+		return err
+	}
+
+	alphabetArray := make([]rune, 0)
+	for letter := range alphabet {
+		alphabetArray = append(alphabetArray, letter)
+	}
+
+	states := make([]*state, 0)
+	used = make(map[*state]bool)
+	if err := traversal(a.startState, nil, &states, nil, &used, &getterStates{}); err != nil {
+		return err
+	}
+
+	var counter int
+
+	for {
+		tuples := make([]tuple, len(states))
+		for i, st := range states {
+			tuples[i] = tuple{prevClass: prevClasses[st], neighbourClasses: make([]int, len(alphabetArray))}
+			for j, letter := range alphabetArray {
+				tuples[i].neighbourClasses[j] = prevClasses[st.next[letter][0]]
+			}
+		}
+
+		counter = 0
+		for i, tuple := range tuples {
+			index := -1
+			for j := 0; j < i; j++ {
+				if cmpTuples(&tuple, &tuples[j]) {
+					index = j
+					break
+				}
+			}
+
+			switch index {
+			case -1:
+				curClasses[states[i]] = counter
+				counter++
+			default:
+				curClasses[states[i]] = index
+			}
+		}
+
+		isEqual := true
+		for k, v := range prevClasses {
+			if v != curClasses[k] {
+				isEqual = false
+			}
+		}
+
+		if len(curClasses) == len(prevClasses) && isEqual {
+			break
+		}
+
+		prevClasses = curClasses
+	}
+
+	fmt.Println("classes", curClasses)
+	fmt.Println("hehe", prevClasses)
+
+	newStates := make([]*state, counter)
+	for i := 0; i < counter; i++ {
+		newStates[i] = &state{next: make(map[rune][]*state)}
+	}
+
+	for key, val := range curClasses {
+		if key.isTerm {
+			newStates[val].isTerm = true
+		}
+
+		for k, v := range key.next {
+			for _, st := range v {
+				newStates[val].next[k] = append(newStates[val].next[k], newStates[curClasses[st]])
+			}
+		}
+	}
+
+	a.startState = newStates[curClasses[a.startState]]
+
 	return nil
 }
 

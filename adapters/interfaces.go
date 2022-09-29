@@ -18,4 +18,5 @@ type AutomateAdapter interface {
 	Determine() error
 	MakeFull() error
 	Invert() error
+	Minimize() error
 }

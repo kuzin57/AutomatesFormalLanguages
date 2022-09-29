@@ -35,7 +35,7 @@ func (a *automateAdapter) Create(name string, parser *parser.Parser) (err error)
 }
 
 func (a *automateAdapter) Determine() error {
-	res, err := automate.DetermineAutomate(a.automate)
+	res, err := a.automate.Determine()
 	if err != nil {
 		return err
 	}
@@ -87,4 +87,8 @@ func (a *automateAdapter) MakeFull() error {
 
 func (a *automateAdapter) Invert() error {
 	return a.automate.Invert()
+}
+
+func (a *automateAdapter) Minimize() error {
+	return a.automate.Minimize()
 }
