@@ -2,7 +2,7 @@
 
 Small Documentation:
 
-- to run shell go to directory cmd/ and run command go build && ./cmd;
+- to run shell go to directory cmd/ and run command: go build && ./cmd;
 - commands:
     - modify
         - eps; flags: -n, name of automate; -h, help; usage: remove epsilon transitions;
