@@ -6,7 +6,7 @@ import (
 )
 
 type Parser struct {
-	Lec        string
+	Token      string
 	Operation  rune
 	Parent     *Parser
 	ChildLeft  *Parser
@@ -14,25 +14,25 @@ type Parser struct {
 }
 
 func NewParser(expr string, parent *Parser) *Parser {
-	return &Parser{Lec: expr, Parent: parent}
+	return &Parser{Token: expr, Parent: parent}
 }
 
 func (t *Parser) Parse() {
 	var (
 		index       int
-		minPriority int
+		minPriority operationPriority
 		balance     int
 	)
 
-	if !strings.Contains(t.Lec, "+") &&
-		!strings.Contains(t.Lec, ".") &&
-		!strings.Contains(t.Lec, "*") {
+	if !strings.Contains(t.Token, "+") &&
+		!strings.Contains(t.Token, ".") &&
+		!strings.Contains(t.Token, "*") {
 		return
 	}
 
-	minPriority = 4
+	minPriority = unspecifiedPriority
 
-	for i, char := range t.Lec {
+	for i, char := range t.Token {
 		switch char {
 		case '(':
 			balance++
@@ -51,17 +51,17 @@ func (t *Parser) Parse() {
 	}
 
 	switch minPriority {
-	case 1, 2:
-		t.ChildLeft = NewParser(t.Lec[:index], t)
-		t.ChildRight = NewParser(t.Lec[(index+1):], t)
+	case plusPriority, concatPriority:
+		t.ChildLeft = NewParser(t.Token[:index], t)
+		t.ChildRight = NewParser(t.Token[(index+1):], t)
 
 		t.ChildLeft.Parse()
 		t.ChildRight.Parse()
-	case 3:
-		t.ChildLeft = NewParser(t.Lec[:index], t)
+	case starPriority:
+		t.ChildLeft = NewParser(t.Token[:index], t)
 		t.ChildLeft.Parse()
-	case 4:
-		t.ChildLeft = NewParser(t.Lec[1:len(t.Lec)-1], t)
+	case unspecifiedPriority:
+		t.ChildLeft = NewParser(t.Token[1:len(t.Token)-1], t)
 		t.ChildLeft.Parse()
 	}
 
@@ -72,9 +72,9 @@ func (t *Parser) Print() {
 	if t == nil {
 		return
 	}
-	if !strings.Contains(t.Lec, "+") &&
-		!strings.Contains(t.Lec, ".") &&
-		!strings.Contains(t.Lec, "*") {
+	if !strings.Contains(t.Token, "+") &&
+		!strings.Contains(t.Token, ".") &&
+		!strings.Contains(t.Token, "*") {
 		return
 	}
 

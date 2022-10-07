@@ -3,7 +3,9 @@ package shell
 import (
 	"fmt"
 
-	showactions "workspace/internal/actions/show_actions"
+	"workspace/adapters"
+	"workspace/internal/display"
+	"workspace/internal/entities/automata"
 
 	"github.com/spf13/cobra"
 )
@@ -65,24 +67,24 @@ type useShowHandler struct {
 }
 
 func (h *useShowHandler) RunE(cmd *cobra.Command, args []string) (err error) {
-	params := &showactions.ShowStatesParams{}
+	var (
+		states       []*automata.State
+		adapterToUse adapters.AutomataAdapter
+	)
 
 	for _, adapter := range h.shell.Automates {
 		if adapter.GetName() == h.name {
-			params.Adapter = adapter
+			adapterToUse = adapter
 			break
 		}
 	}
 
-	action, err := showactions.NewShowStatesAction(params)
-	if err != nil {
-		return err
+	if states, err = adapterToUse.GetStates(); err != nil {
+		return
 	}
 
-	action.Do()
-	if err = action.Error; err != nil {
-		return err
+	if err = display.DisplayGraph(states, adapterToUse.GetName()); err != nil {
+		return
 	}
-
 	return nil
 }

@@ -2,7 +2,8 @@ package shell
 
 import (
 	"fmt"
-	makeactions "workspace/internal/actions/make_actions"
+	automatesadapters "workspace/adapters/automatas_adapters"
+	"workspace/internal/entities/parser"
 
 	"github.com/spf13/cobra"
 )
@@ -43,22 +44,22 @@ type createAutomateHandler struct {
 	name        string
 }
 
-func (h *createAutomateHandler) RunE(cmd *cobra.Command, args []string) error {
-	params := &makeactions.MakeAutomateParams{Expr: h.regularExpr, Name: h.name}
-	action, err := makeactions.NewMakeAutomateAction(params, nil)
-	if err != nil {
-		return err
+func (h *createAutomateHandler) RunE(cmd *cobra.Command, args []string) (err error) {
+	automateAdapter := automatesadapters.NewAutomateAdapter(h.name)
+	automateAdapter.SetName(h.name)
+
+	newAutomateAdapter := automatesadapters.NewAutomateAdapter(h.name)
+
+	parser := parser.NewParser(h.regularExpr, nil)
+	parser.Parse()
+
+	newAutomateAdapter.Create(h.name, parser)
+	if err = automateAdapter.Join(newAutomateAdapter); err != nil {
+		return
 	}
 
-	action.Do()
-	if action.CheckErr() {
-		return action.Error
-	}
-
-	h.shell.Automates = append(h.shell.Automates, action.Result().Adapter)
-
+	h.shell.Automates = append(h.shell.Automates, automateAdapter)
 	fmt.Println("success!")
-
 	return nil
 }
 
@@ -71,7 +72,7 @@ func (h *createRegExHandler) RunE(cmd *cobra.Command, args []string) (err error)
 	var expr string
 	for _, adapter := range h.shell.Automates {
 		if adapter.GetName() == h.name {
-			expr, err = adapter.GetRegularExpr()
+			expr, err = adapter.GetRegularExpression()
 			if err != nil {
 				return err
 			}

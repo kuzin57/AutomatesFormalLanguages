@@ -2,13 +2,13 @@ package display
 
 import (
 	"fmt"
-	"workspace/internal/entities/automate"
+	"workspace/internal/entities/automata"
 
 	"github.com/goccy/go-graphviz"
 	"github.com/goccy/go-graphviz/cgraph"
 )
 
-func DisplayGraph(states []*automate.State, name string) (err error) {
+func DisplayGraph(states []*automata.State, name string) (err error) {
 	g := graphviz.New()
 	graph, err := g.Graph()
 	if err != nil {
@@ -34,7 +34,7 @@ func DisplayGraph(states []*automate.State, name string) (err error) {
 	return
 }
 
-func createGraph(states []*automate.State, graph *cgraph.Graph) (err error) {
+func createGraph(states []*automata.State, graph *cgraph.Graph) (err error) {
 	nodes := make([]*cgraph.Node, len(states))
 	for i, state := range states {
 		nodes[i], err = graph.CreateNode(fmt.Sprint(state.Number))
@@ -50,7 +50,7 @@ func createGraph(states []*automate.State, graph *cgraph.Graph) (err error) {
 	return createEdges(states, graph, nodes)
 }
 
-func createEdges(states []*automate.State, graph *cgraph.Graph, nodes []*cgraph.Node) error {
+func createEdges(states []*automata.State, graph *cgraph.Graph, nodes []*cgraph.Node) error {
 	mapNodes := make(map[int]*cgraph.Node)
 	for i, node := range nodes {
 		mapNodes[states[i].Number] = node

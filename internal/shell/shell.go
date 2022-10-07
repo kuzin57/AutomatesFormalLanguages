@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
-	"strings"
 	"workspace/adapters"
 	"workspace/internal/entities/parser"
 
@@ -17,7 +15,7 @@ import (
 
 type Shell struct {
 	router    *commandRouter
-	Automates []adapters.AutomateAdapter
+	Automates []adapters.AutomataAdapter
 	Parser    parser.Parser
 	prompt    string
 }
@@ -103,17 +101,4 @@ func (s *Shell) reportError(err error) {
 
 func (s *Shell) print(value string) {
 	fmt.Println("  ", value)
-}
-
-func (s *Shell) printTable(value string) {
-	if len(value) < 1024 {
-		fmt.Println(value)
-		return
-	}
-	cmd := exec.Command("/usr/bin/less")
-	cmd.Stdin = strings.NewReader(value)
-	cmd.Stdout = os.Stdout
-	if err := cmd.Run(); err != nil {
-		panic(err)
-	}
 }

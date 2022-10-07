@@ -3,8 +3,6 @@ package shell
 import (
 	"fmt"
 
-	modifyactions "workspace/internal/actions/modify_actions"
-
 	"github.com/spf13/cobra"
 )
 
@@ -83,19 +81,9 @@ type modifyEpsHandler struct {
 }
 
 func (h *modifyEpsHandler) RunE(cmd *cobra.Command, args []string) error {
-	params := modifyactions.DeleteEpsParams{}
-
 	for _, adapter := range h.shell.Automates {
 		if adapter.GetName() == h.name {
-			params.Adapter = adapter
-
-			action, err := modifyactions.NewDeleteEpsAction(&params, nil)
-			if err != nil {
-				return err
-			}
-
-			action.Do()
-			if err = action.Error; err != nil {
+			if err := adapter.DeleteEps(); err != nil {
 				return err
 			}
 		}
@@ -110,17 +98,9 @@ type modifyDetHandler struct {
 }
 
 func (h *modifyDetHandler) RunE(cmd *cobra.Command, args []string) error {
-	params := modifyactions.DetermineParams{}
 	for _, adapter := range h.shell.Automates {
 		if adapter.GetName() == h.name {
-			params.NFA = adapter
-			action, err := modifyactions.NewDetermineAction(&params)
-			if err != nil {
-				return err
-			}
-
-			action.Do()
-			if err = action.Error; err != nil {
+			if err := adapter.Determine(); err != nil {
 				return err
 			}
 		}
@@ -135,17 +115,9 @@ type modifyMakeFullHandler struct {
 }
 
 func (h *modifyMakeFullHandler) RunE(cmd *cobra.Command, args []string) error {
-	params := modifyactions.MakeFullParams{}
 	for _, adapter := range h.shell.Automates {
 		if adapter.GetName() == h.name {
-			params.Adapter = adapter
-			action, err := modifyactions.NewMakeFullAction(&params)
-			if err != nil {
-				return err
-			}
-
-			action.Do()
-			if err = action.Error; err != nil {
+			if err := adapter.MakeFull(); err != nil {
 				return err
 			}
 		}
@@ -160,17 +132,9 @@ type modifyInvertHandler struct {
 }
 
 func (h *modifyInvertHandler) RunE(cmd *cobra.Command, args []string) error {
-	params := modifyactions.InvertParams{}
 	for _, adapter := range h.shell.Automates {
 		if adapter.GetName() == h.name {
-			params.Adapter = adapter
-			action, err := modifyactions.NewInvertAction(&params)
-			if err != nil {
-				return err
-			}
-
-			action.Do()
-			if err = action.Error; err != nil {
+			if err := adapter.Invert(); err != nil {
 				return err
 			}
 		}
@@ -185,17 +149,9 @@ type modifyMinHandler struct {
 }
 
 func (h *modifyMinHandler) RunE(cmd *cobra.Command, args []string) error {
-	params := modifyactions.MinimizeParams{}
 	for _, adapter := range h.shell.Automates {
 		if adapter.GetName() == h.name {
-			params.Adapter = adapter
-			action, err := modifyactions.NewMinimizeAction(&params)
-			if err != nil {
-				return err
-			}
-
-			action.Do()
-			if err = action.Error; err != nil {
+			if err := adapter.Minimize(); err != nil {
 				return err
 			}
 		}

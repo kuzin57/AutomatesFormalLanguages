@@ -1,7 +1,7 @@
 package fabric
 
-import "workspace/internal/entities/automate"
+import automata "workspace/internal/entities/automata"
 
-type AutomateFabric interface {
-	Create() (*automate.Automate, error)
+type AutomataFabric interface {
+	Create() (*automata.Automata, error)
 }
