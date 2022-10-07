@@ -9,5 +9,4 @@ func main() {
 		panic("error while initializing")
 	}
 	shell.Run()
-
 }

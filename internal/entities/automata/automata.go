@@ -12,9 +12,7 @@ func getSetsTranisitions(a *Automata) (*[]*map[*state]bool, *map[int]map[string]
 	alphabet := make(map[string]bool)
 	used := make(map[*state]bool)
 
-	// getterAlphabet := &getterAlphabet{alphabet: &alphabet}
-	// if err := getterAlphabet.Execute()
-	if err := traversal(a.startState, nil, nil, nil, &used, &getterAlphabet{alphabet: &alphabet}); err != nil {
+	if err := a.walker.walk(a.startState, used, &getterAlphabet{alphabet: &alphabet}); err != nil {
 		return nil, nil, err
 	}
 
@@ -126,6 +124,7 @@ func (a *Automata) ConstructState(
 type Automata struct {
 	startState *state
 	terminals  []*state
+	walker     walker
 }
 
 func (a *Automata) DeleteEps() error {
@@ -136,7 +135,7 @@ func (a *Automata) DeleteEps() error {
 	}
 
 	used = make(map[*state]bool)
-	if err := traversal(a.startState, nil, nil, nil, &used, &deleterEps{}); err != nil {
+	if err := a.walker.walk(a.startState, used, &deleterEps{}); err != nil {
 		return err
 	}
 
@@ -149,7 +148,7 @@ func (a *Automata) GetStates() (ans []*State, err error) {
 		used   = make(map[*state]bool)
 	)
 
-	if err := traversal(a.startState, nil, &states, nil, &used, &getterStates{}); err != nil {
+	if err := a.walker.walk(a.startState, used, &getterStates{states: &states}); err != nil {
 		return nil, err
 	}
 
@@ -247,7 +246,7 @@ func (a *Automata) Full() error {
 		used     = make(map[*state]bool)
 	)
 
-	if err := traversal(a.startState, nil, nil, nil, &used, &getterAlphabet{alphabet: &alphabet}); err != nil {
+	if err := a.walker.walk(a.startState, used, &getterAlphabet{alphabet: &alphabet}); err != nil {
 		return err
 	}
 	for letter := range alphabet {
@@ -255,7 +254,7 @@ func (a *Automata) Full() error {
 	}
 
 	used = make(map[*state]bool)
-	return traversal(a.startState, stock, nil, nil, &used, &fuller{alphabet: &alphabet})
+	return a.walker.walk(a.startState, used, &fuller{alphabet: &alphabet, stock: stock})
 }
 
 func (a *Automata) Invert() error {
@@ -264,7 +263,7 @@ func (a *Automata) Invert() error {
 		used         = make(map[*state]bool)
 	)
 
-	if err := traversal(a.startState, nil, &newTerminals, nil, &used, &inverter{}); err != nil {
+	if err := a.walker.walk(a.startState, used, &inverter{terminals: &newTerminals}); err != nil {
 		return err
 	}
 
@@ -335,21 +334,21 @@ func (a *Automata) Minimize() error {
 		counterClasses             int
 	)
 
-	if err := traversal(a.startState, nil, nil, &previousEquivalenceClasses, &used, &getterTerminals{}); err != nil {
+	if err := a.walker.walk(a.startState, used, &getterTerminals{classes: &previousEquivalenceClasses}); err != nil {
 		return err
 	}
 
 	used = make(map[*state]bool)
-
-	if err := traversal(a.startState, nil, nil, nil, &used, &getterAlphabet{alphabet: &alphabet}); err != nil {
+	if err := a.walker.walk(a.startState, used, &getterAlphabet{alphabet: &alphabet}); err != nil {
 		return err
 	}
+
 	for letter := range alphabet {
 		alphabetArray = append(alphabetArray, letter)
 	}
 
 	used = make(map[*state]bool)
-	if err := traversal(a.startState, nil, &states, nil, &used, &getterStates{}); err != nil {
+	if err := a.walker.walk(a.startState, used, &getterStates{states: &states}); err != nil {
 		return err
 	}
 
@@ -494,7 +493,7 @@ func (a *Automata) GetRegularExpression() (string, error) {
 		terminal.next[""] = append(terminal.next[""], newTerm)
 	}
 
-	if err := traversal(a.startState, nil, &states, nil, &used, &getterStates{}); err != nil {
+	if err := a.walker.walk(a.startState, used, &getterStates{states: &states}); err != nil {
 		return "", err
 	}
 

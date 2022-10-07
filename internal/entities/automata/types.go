@@ -1,28 +1,36 @@
 package automata
 
-import (
-	customerrors "workspace/internal/errors"
-)
+type walker struct{}
 
-type inverter struct{}
-
-func (i *inverter) Execute(args ...any) error {
-	st, ok := args[0].(*state)
-	if !ok {
-		return customerrors.ErrInvalidArgument
+func (w *walker) walk(start *state, used map[*state]bool, executor Executor) error {
+	used[start] = true
+	for _, val := range start.next {
+		for _, v := range val {
+			_, ok := used[v]
+			if !ok {
+				err := w.walk(v, used, executor)
+				if err != nil {
+					return err
+				}
+			}
+		}
 	}
 
-	terminals, ok := args[2].(*[]*state)
-	if !ok {
-		return customerrors.ErrInvalidArgument
-	}
+	executor.Execute(start)
+	return nil
+}
 
-	switch st.isTerminal {
+type inverter struct {
+	terminals *[]*state
+}
+
+func (i *inverter) Execute(state *state) error {
+	switch state.isTerminal {
 	case true:
-		st.isTerminal = false
+		state.isTerminal = false
 	case false:
-		st.isTerminal = true
-		(*terminals) = append((*terminals), st)
+		state.isTerminal = true
+		*(i.terminals) = append(*(i.terminals), state)
 	}
 
 	return nil
@@ -30,36 +38,21 @@ func (i *inverter) Execute(args ...any) error {
 
 type deleterEps struct{}
 
-func (d *deleterEps) Execute(args ...any) error {
-	st, ok := args[0].(*state)
-	if !ok {
-		return customerrors.ErrInvalidArgument
-	}
-
-	delete(st.next, emptyWord)
-
+func (d *deleterEps) Execute(state *state) error {
+	delete(state.next, emptyWord)
 	return nil
 }
 
 type fuller struct {
 	alphabet *map[string]bool
+	stock    *state
 }
 
-func (f *fuller) Execute(args ...any) error {
-	st, ok := args[0].(*state)
-	if !ok {
-		return customerrors.ErrInvalidArgument
-	}
-
-	stock, ok := args[1].(*state)
-	if !ok {
-		return customerrors.ErrInvalidArgument
-	}
-
+func (f *fuller) Execute(st *state) error {
 	for key := range *(f.alphabet) {
 		_, ok := st.next[key]
 		if !ok {
-			st.next[key] = []*state{stock}
+			st.next[key] = []*state{f.stock}
 		}
 	}
 	return nil
@@ -69,13 +62,8 @@ type getterAlphabet struct {
 	alphabet *map[string]bool
 }
 
-func (g *getterAlphabet) Execute(args ...any) error {
-	st, ok := args[0].(*state)
-	if !ok {
-		return customerrors.ErrInvalidArgument
-	}
-
-	for key := range st.next {
+func (g *getterAlphabet) Execute(state *state) error {
+	for key := range state.next {
 		if key != emptyWord {
 			(*(g.alphabet))[key] = true
 		}
@@ -84,42 +72,25 @@ func (g *getterAlphabet) Execute(args ...any) error {
 	return nil
 }
 
-type getterTerminals struct{}
+type getterTerminals struct {
+	classes *map[*state]int
+}
 
-func (g *getterTerminals) Execute(args ...any) error {
-	st, ok := args[0].(*state)
-	if !ok {
-		return customerrors.ErrInvalidArgument
-	}
-
-	classes, ok := args[3].(*map[*state]int)
-	if !ok {
-		return customerrors.ErrInvalidArgument
-	}
-
-	switch st.isTerminal {
+func (g *getterTerminals) Execute(state *state) error {
+	switch state.isTerminal {
 	case true:
-		(*classes)[st] = 0
+		(*(g.classes))[state] = 0
 	case false:
-		(*classes)[st] = 1
+		(*(g.classes))[state] = 1
 	}
-
 	return nil
 }
 
-type getterStates struct{}
+type getterStates struct {
+	states *[]*state
+}
 
-func (g *getterStates) Execute(args ...any) error {
-	st, ok := args[0].(*state)
-	if !ok {
-		return customerrors.ErrInvalidArgument
-	}
-
-	states, ok := args[2].(*[]*state)
-	if !ok {
-		return customerrors.ErrInvalidArgument
-	}
-
-	*states = append(*states, st)
+func (g *getterStates) Execute(state *state) error {
+	*(g.states) = append(*(g.states), state)
 	return nil
 }

@@ -182,35 +182,6 @@ func proccessSelfTransitions(state *state) (string, error) {
 	return result, nil
 }
 
-func traversal(
-	st *state,
-	stock *state,
-	arrStates *[]*state,
-	classes *map[*state]int,
-	used *map[*state]bool,
-	executor Executor,
-) error {
-	(*used)[st] = true
-
-	for _, val := range st.next {
-		for _, v := range val {
-			_, ok := (*used)[v]
-			if !ok {
-				err := traversal(v, stock, arrStates, classes, used, executor)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	if err := executor.Execute(st, stock, arrStates, classes); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func removeDublicates(currentState *state) error {
 	regulars := make(map[*state]string)
 
