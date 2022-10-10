@@ -1,7 +1,11 @@
 package automata
 
 import (
+	"fmt"
 	"reflect"
+
+	"github.com/goccy/go-graphviz"
+	"github.com/goccy/go-graphviz/cgraph"
 )
 
 func NewAutomata() *Automata {
@@ -85,12 +89,11 @@ func (a *Automata) Determine() (*Automata, error) {
 
 	created := make(map[int]*state)
 	result := &Automata{}
-	result.startState = result.ConstructState(transitions, sets, &created, 0)
-
+	result.startState = result.constructState(transitions, sets, &created, 0)
 	return result, nil
 }
 
-func (a *Automata) ConstructState(
+func (a *Automata) constructState(
 	transitions *map[int]map[string]int,
 	sets *[]*map[*state]bool,
 	created *map[int]*state,
@@ -113,7 +116,7 @@ func (a *Automata) ConstructState(
 			result.next[letter] = make([]*state, 1)
 			result.next[letter][0] = set
 		} else {
-			newState := a.ConstructState(transitions, sets, created, numberState)
+			newState := a.constructState(transitions, sets, created, numberState)
 			result.next[letter] = make([]*state, 1)
 			result.next[letter][0] = newState
 		}
@@ -395,8 +398,11 @@ func (a *Automata) Minimize() error {
 
 func addExpression(to string, inBrackets string, afterBrackets string) string {
 	switch {
-	case inBrackets == "", len(inBrackets) == 1:
+	case inBrackets == "":
 		to += inBrackets
+	case len(inBrackets) == 1:
+		to += inBrackets
+		to += afterBrackets
 	default:
 		to += "("
 		to += inBrackets
@@ -406,14 +412,14 @@ func addExpression(to string, inBrackets string, afterBrackets string) string {
 	return to
 }
 
-func compressTransitions(currentState *state, transtitionsToAdd map[string][]*state, letter string, expression string) {
+func compressTransitions(currentState *state, processedState *state, transtitionsToAdd map[string][]*state, letter string, expression string) {
 	for k, node := range currentState.next {
 		for _, n := range node {
 			var ex string
 			ex = addExpression(ex, letter, "")
 			ex = addExpression(ex, expression, "*")
 			ex = addExpression(ex, k, "")
-
+			fmt.Println("ex", ex, letter, expression, k)
 			_, ok := transtitionsToAdd[ex]
 			switch ok {
 			case true:
@@ -431,7 +437,7 @@ func deleteStateAddTransitions(stateToDelete *state, processedState *state, expr
 		toDelete := -1
 		for _, stateTo := range statesTo {
 			if stateTo == stateToDelete {
-				compressTransitions(stateTo, toAdd, letter, expression)
+				compressTransitions(stateTo, processedState, toAdd, letter, expression)
 			}
 		}
 
@@ -456,15 +462,80 @@ func deleteStateAddTransitions(stateToDelete *state, processedState *state, expr
 			}
 		}
 	}
-
+	fmt.Println("hehehehe", toAdd)
 	for exp, node := range toAdd {
 		for _, nn := range node {
 			_, ok := processedState.next[exp]
 			if !ok {
 				processedState.next[exp] = []*state{nn}
+			} else {
+				processedState.next[exp] = append(processedState.next[exp], nn)
 			}
 		}
 	}
+}
+
+func DisplayGraph(states []*State, name string) (err error) {
+	g := graphviz.New()
+	graph, err := g.Graph()
+	if err != nil {
+		return
+	}
+
+	defer func() {
+		if err = graph.Close(); err != nil {
+			return
+		}
+		g.Close()
+	}()
+
+	if err = createGraph(states, graph); err != nil {
+		return
+	}
+
+	filename := "./" + name + ".png"
+	if err = g.RenderFilename(graph, graphviz.PNG, filename); err != nil {
+		return
+	}
+
+	return
+}
+
+func createGraph(states []*State, graph *cgraph.Graph) (err error) {
+	nodes := make([]*cgraph.Node, len(states))
+	for i, state := range states {
+		nodes[i], err = graph.CreateNode(fmt.Sprint(state.Number))
+		if err != nil {
+			return err
+		}
+
+		if state.IsTerminal {
+			nodes[i].SetFontColor("blue")
+		}
+	}
+
+	return createEdges(states, graph, nodes)
+}
+
+func createEdges(states []*State, graph *cgraph.Graph, nodes []*cgraph.Node) error {
+	mapNodes := make(map[int]*cgraph.Node)
+	for i, node := range nodes {
+		mapNodes[states[i].Number] = node
+	}
+
+	for i, state := range states {
+		for key, to := range state.Transitions {
+			for _, v := range to {
+				edge, err := graph.CreateEdge(string(key), nodes[i], mapNodes[v])
+				if err != nil {
+					return err
+				}
+
+				edge.SetLabel(string(key))
+			}
+		}
+	}
+	return nil
 }
 
 func (a *Automata) formExpressionFromStartState() string {
@@ -497,24 +568,28 @@ func (a *Automata) GetRegularExpression() (string, error) {
 		return "", err
 	}
 
+	var cnt int
 	for {
+		ssss, _ := a.GetStates()
+		DisplayGraph(ssss, fmt.Sprint(cnt))
+		cnt++
 		var (
 			exit          = true
 			stateToDelete *state
 			indexToDelete int
 		)
 
-		for i, s := range states {
-			if !s.isTerminal && a.startState != s {
-				stateToDelete = s
+		for i, state := range states {
+			if !state.isTerminal && a.startState != state {
+				stateToDelete = state
 				exit = false
 				indexToDelete = i
 				break
 			}
 		}
 
-		for _, s := range states {
-			err := removeDublicates(s)
+		for _, state := range states {
+			err := removeDublicates(state)
 			if err != nil {
 				return "", err
 			}
@@ -524,17 +599,17 @@ func (a *Automata) GetRegularExpression() (string, error) {
 			break
 		}
 
-		expr, err := proccessSelfTransitions(stateToDelete)
+		expression, err := proccessSelfTransitions(stateToDelete)
 		if err != nil {
 			return "", err
 		}
 
-		for _, stat := range states {
-			err := removeDublicates(stat)
+		for _, state := range states {
+			err := removeDublicates(state)
 			if err != nil {
 				return "", err
 			}
-			deleteStateAddTransitions(stateToDelete, stat, expr)
+			deleteStateAddTransitions(stateToDelete, state, expression)
 		}
 
 		states = append(states[:indexToDelete], states[(indexToDelete+1):]...)

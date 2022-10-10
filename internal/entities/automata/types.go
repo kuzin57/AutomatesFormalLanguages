@@ -1,5 +1,9 @@
 package automata
 
+import (
+	customerrors "workspace/internal/errors"
+)
+
 type walker struct{}
 
 func (w *walker) walk(start *state, used map[*state]bool, executor Executor) error {
@@ -18,6 +22,23 @@ func (w *walker) walk(start *state, used map[*state]bool, executor Executor) err
 
 	executor.Execute(start)
 	return nil
+}
+
+func (w *walker) walkCheck(start *state, used map[*state]bool, checker Checker) error {
+	used[start] = true
+	for _, val := range start.next {
+		for _, v := range val {
+			_, ok := used[v]
+			if !ok {
+				err := w.walkCheck(v, used, checker)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return checker.Check(start)
 }
 
 type inverter struct {
@@ -92,5 +113,43 @@ type getterStates struct {
 
 func (g *getterStates) Execute(state *state) error {
 	*(g.states) = append(*(g.states), state)
+	return nil
+}
+
+// checkers
+
+type determineChecker struct{}
+
+func (d *determineChecker) Check(state *state) error {
+	for _, statesTo := range state.next {
+		if len(statesTo) >= 2 {
+			return customerrors.ErrNotDetermine
+		}
+	}
+	return nil
+}
+
+type noEpsilonChecker struct{}
+
+func (n *noEpsilonChecker) Check(state *state) error {
+	for letter := range state.next {
+		if letter == emptyWord {
+			return customerrors.ErrHasEpsilonTransitions
+		}
+	}
+	return nil
+}
+
+type fullChecker struct {
+	alphabet map[string]bool
+}
+
+func (f *fullChecker) Check(state *state) error {
+	for letter := range f.alphabet {
+		if _, ok := state.next[letter]; !ok {
+			return customerrors.ErrNotFull
+		}
+
+	}
 	return nil
 }

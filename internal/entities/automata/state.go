@@ -184,11 +184,10 @@ func proccessSelfTransitions(state *state) (string, error) {
 
 func removeDublicates(currentState *state) error {
 	regulars := make(map[*state]string)
-
 	for letter, statesTo := range currentState.next {
 		for _, stateTo := range statesTo {
 			_, ok := regulars[stateTo]
-			if !ok {
+			if !ok || len(letter) == 0 || len(regulars[stateTo]) == 0 {
 				regulars[stateTo] = letter
 			} else {
 				regulars[stateTo] += "+"
@@ -203,6 +202,19 @@ func removeDublicates(currentState *state) error {
 		if !ok {
 			currentState.next[word] = append(currentState.next[word], state)
 		}
+	}
+
+	toDelete := make([]string, 0)
+	for letter, statesTo := range currentState.next {
+		for _, stateTo := range statesTo {
+			if letter != regulars[stateTo] {
+				toDelete = append(toDelete, letter)
+			}
+		}
+	}
+
+	for _, toRemove := range toDelete {
+		delete(currentState.next, toRemove)
 	}
 
 	return nil
