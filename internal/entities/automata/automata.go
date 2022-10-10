@@ -1,11 +1,7 @@
 package automata
 
 import (
-	"fmt"
 	"reflect"
-
-	"github.com/goccy/go-graphviz"
-	"github.com/goccy/go-graphviz/cgraph"
 )
 
 func NewAutomata() *Automata {
@@ -417,9 +413,14 @@ func compressTransitions(currentState *state, processedState *state, transtition
 		for _, n := range node {
 			var ex string
 			ex = addExpression(ex, letter, "")
+			if ex != "" && !(expression == "" && k == "") {
+				ex += "."
+			}
 			ex = addExpression(ex, expression, "*")
+			if expression != "" && k != "" {
+				ex += "."
+			}
 			ex = addExpression(ex, k, "")
-			fmt.Println("ex", ex, letter, expression, k)
 			_, ok := transtitionsToAdd[ex]
 			switch ok {
 			case true:
@@ -434,13 +435,26 @@ func compressTransitions(currentState *state, processedState *state, transtition
 func deleteStateAddTransitions(stateToDelete *state, processedState *state, expression string) {
 	toAdd := make(map[string][]*state)
 	for letter, statesTo := range processedState.next {
-		toDelete := -1
 		for _, stateTo := range statesTo {
 			if stateTo == stateToDelete {
 				compressTransitions(stateTo, processedState, toAdd, letter, expression)
 			}
 		}
+	}
 
+	for exp, node := range toAdd {
+		for _, nn := range node {
+			_, ok := processedState.next[exp]
+			if !ok {
+				processedState.next[exp] = []*state{nn}
+			} else {
+				processedState.next[exp] = append(processedState.next[exp], nn)
+			}
+		}
+	}
+
+	for letter := range processedState.next {
+		toDelete := -1
 		for j, n := range processedState.next[letter] {
 			if n == stateToDelete {
 				toDelete = j
@@ -462,94 +476,24 @@ func deleteStateAddTransitions(stateToDelete *state, processedState *state, expr
 			}
 		}
 	}
-	fmt.Println("hehehehe", toAdd)
-	for exp, node := range toAdd {
-		for _, nn := range node {
-			_, ok := processedState.next[exp]
-			if !ok {
-				processedState.next[exp] = []*state{nn}
-			} else {
-				processedState.next[exp] = append(processedState.next[exp], nn)
-			}
-		}
-	}
-}
-
-func DisplayGraph(states []*State, name string) (err error) {
-	g := graphviz.New()
-	graph, err := g.Graph()
-	if err != nil {
-		return
-	}
-
-	defer func() {
-		if err = graph.Close(); err != nil {
-			return
-		}
-		g.Close()
-	}()
-
-	if err = createGraph(states, graph); err != nil {
-		return
-	}
-
-	filename := "./" + name + ".png"
-	if err = g.RenderFilename(graph, graphviz.PNG, filename); err != nil {
-		return
-	}
-
-	return
-}
-
-func createGraph(states []*State, graph *cgraph.Graph) (err error) {
-	nodes := make([]*cgraph.Node, len(states))
-	for i, state := range states {
-		nodes[i], err = graph.CreateNode(fmt.Sprint(state.Number))
-		if err != nil {
-			return err
-		}
-
-		if state.IsTerminal {
-			nodes[i].SetFontColor("blue")
-		}
-	}
-
-	return createEdges(states, graph, nodes)
-}
-
-func createEdges(states []*State, graph *cgraph.Graph, nodes []*cgraph.Node) error {
-	mapNodes := make(map[int]*cgraph.Node)
-	for i, node := range nodes {
-		mapNodes[states[i].Number] = node
-	}
-
-	for i, state := range states {
-		for key, to := range state.Transitions {
-			for _, v := range to {
-				edge, err := graph.CreateEdge(string(key), nodes[i], mapNodes[v])
-				if err != nil {
-					return err
-				}
-
-				edge.SetLabel(string(key))
-			}
-		}
-	}
-	return nil
 }
 
 func (a *Automata) formExpressionFromStartState() string {
-	var ans string
+	var fromStartToStart string
+	var fromStartToEnd string
 	for key, val := range a.startState.next {
 		for _, v := range val {
 			if v == a.startState && key != "" {
-				ans += "(" + key + ")" + "*"
+				fromStartToStart = "(" + key + ")" + "*"
 			} else {
-				ans += key
+				fromStartToEnd = key
 			}
 		}
 	}
-	return ans
+	if fromStartToEnd == "" {
+		return fromStartToStart
+	}
+	return fromStartToStart + "." + fromStartToEnd
 }
 
 func (a *Automata) GetRegularExpression() (string, error) {
@@ -568,11 +512,7 @@ func (a *Automata) GetRegularExpression() (string, error) {
 		return "", err
 	}
 
-	var cnt int
 	for {
-		ssss, _ := a.GetStates()
-		DisplayGraph(ssss, fmt.Sprint(cnt))
-		cnt++
 		var (
 			exit          = true
 			stateToDelete *state

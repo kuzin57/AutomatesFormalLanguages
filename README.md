@@ -14,3 +14,4 @@ Small Documentation:
         - read; flags: -n, name of automate; -h, help; usage: check if automate can read the word;
     - create 
         - automate; flags: -n, name of automate; -r, regular expression; -h, help; usage: build automate by expression
+- to test go to directory internal/entities/automata and run command: go test -coverprofile=coverage.out. To see coverage run: go tool cover -html=coverage.out

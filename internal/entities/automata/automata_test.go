@@ -15,6 +15,9 @@ var (
 		"a.c",
 		"a*",
 		"a.b.c",
+		"(a.a.b+a+a.b.a+b.b.a)*",
+		"(a*.b)*",
+		"(a.b+b.a+a.a.b)*",
 	}
 )
 
@@ -37,6 +40,25 @@ func SetupAutomata(regularExpression string) (*automata.Automata, error) {
 func TestNewAutomata(t *testing.T) {
 	automata := automata.NewAutomata()
 	assert.NotNil(t, automata)
+}
+
+func TestRead(t *testing.T) {
+	var (
+		testCasesSuccess = []string{"aabb", "aaaabbbb", "abababab", "aa", ""}
+		testCasesFail    = []string{"a", "b", "aab", "aaabb", "ababab"}
+	)
+
+	automata, err := SetupAutomata(regularExpressions[0])
+	assert.NoError(t, err)
+	assert.NotNil(t, automata)
+
+	for _, testCase := range testCasesSuccess {
+		assert.NoError(t, automata.Read(testCase))
+	}
+
+	for _, testCase := range testCasesFail {
+		assert.Error(t, automata.Read(testCase))
+	}
 }
 
 func TestDeleteEps(t *testing.T) {
@@ -219,20 +241,53 @@ func TestMinimize(t *testing.T) {
 }
 
 func TestGetRegularExpression(t *testing.T) {
-	automata, err := SetupAutomata(regularExpressions[0])
-	assert.NoError(t, err)
-	assert.NotNil(t, automata)
+	testCases := []string{
+		regularExpressions[0],
+		regularExpressions[4],
+		regularExpressions[5],
+		regularExpressions[6],
+	}
+	for _, tC := range testCases {
+		t.Run(tC, func(t *testing.T) {
+			automata, err := SetupAutomata(tC)
+			assert.NoError(t, err)
+			assert.NotNil(t, automata)
 
-	assert.NoError(t, automata.DeleteEps())
+			assert.NoError(t, automata.DeleteEps())
 
-	detAutomata, err := automata.Determine()
-	assert.NoError(t, err)
-	assert.NotNil(t, detAutomata)
+			detAutomata, err := automata.Determine()
+			assert.NoError(t, err)
+			assert.NotNil(t, detAutomata)
 
-	assert.NoError(t, detAutomata.Full())
-	assert.NoError(t, detAutomata.Minimize())
+			assert.NoError(t, detAutomata.Full())
+			assert.NoError(t, detAutomata.Minimize())
 
-	regularExpression, err := detAutomata.GetRegularExpression()
-	assert.NotEmpty(t, regularExpression)
-	assert.NoError(t, err)
+			statesBeforeRegularExpression, err := detAutomata.GetStates()
+			assert.NoError(t, err)
+			assert.NotEmpty(t, statesBeforeRegularExpression)
+
+			regularExpression, err := detAutomata.GetRegularExpression()
+			assert.NotEmpty(t, regularExpression)
+			assert.NoError(t, err)
+
+			newAutomata, err := SetupAutomata(regularExpression)
+			assert.NoError(t, err)
+			assert.NotNil(t, newAutomata)
+
+			assert.NoError(t, newAutomata.DeleteEps())
+
+			newDetAutomata, err := newAutomata.Determine()
+			assert.NoError(t, err)
+			assert.NotNil(t, newDetAutomata)
+
+			assert.NoError(t, newDetAutomata.Full())
+			assert.NoError(t, newDetAutomata.Minimize())
+
+			statesAfterRegularExpression, err := newDetAutomata.GetStates()
+			assert.NoError(t, err)
+			assert.NotEmpty(t, statesAfterRegularExpression)
+
+			assert.Equal(t, len(statesBeforeRegularExpression), len(statesAfterRegularExpression))
+		})
+	}
 }
