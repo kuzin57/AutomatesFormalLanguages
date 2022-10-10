@@ -1,0 +1,5 @@
+package automata
+
+const (
+	emptyWord = "#"
+)

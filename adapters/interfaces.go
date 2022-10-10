@@ -1,17 +1,23 @@
 package adapters
 
 import (
-	"workspace/internal/automate"
+	automata "workspace/internal/entities/automata"
+	"workspace/internal/entities/parser"
 )
 
-type AutomateAdapter interface {
-	Get() (automate.Automate, error)
-	Create(string, string) error
+type AutomataAdapter interface {
+	Get() (*automata.Automata, error)
+	Create(string, *parser.Parser) error
 	AddStar() error
-	Join(AutomateAdapter) error
+	Join(AutomataAdapter) error
 	Read(string) error
 	GetName() string
 	SetName(string)
 	DeleteEps() error
-	GetStates() ([]*automate.State, error)
+	GetStates() ([]*automata.State, error)
+	Determine() error
+	MakeFull() error
+	Invert() error
+	Minimize() error
+	GetRegularExpression() (string, error)
 }
